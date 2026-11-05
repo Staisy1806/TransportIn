@@ -1,0 +1,61 @@
+﻿@page "/driver-dashboard"
+@rendermode InteractiveServer
+@inject TransportIn.Services.AuthService AuthService
+@inject TransportIn.Services.EmergencyService EmergencyService
+@implements IDisposable
+@inject NavigationManager Navigation
+
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Кабінет Водія: @AuthService.CurrentUser?.FullName</h2>
+        <button class="btn btn-outline-danger btn-sm" @onclick="Logout">Вийти</button>
+    </div>
+
+    <!-- Сповіщення про надзвичайну ситуацію -->
+    <div class="alert @GetAlertClass(EmergencyService.CurrentEmergency) mb-4 shadow-sm">
+        <h4 class="alert-heading">⚠️ Статус у місті: <strong>@EmergencyService.CurrentEmergency</strong></h4>
+        <p class="mb-0">Дотримуйтесь інструкцій логістичного центру та правил безпеки для цього режиму.</p>
+    </div>
+
+    <!-- Решта вашого інтерфейсу водія -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h4>Мої поточні завдання та маршрути</h4>
+            <p class="text-muted">Тут відображаються призначені вантажі та статус виконання.</p>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Безпечно підписуємося з викликом InvokeAsync через лямбда-вираз
+        EmergencyService.OnChange += OnEmergencyChanged;
+    }
+
+    private void OnEmergencyChanged()
+    {
+        // Переносимо виконання в контекст диспетчера Blazor
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetAlertClass(string status) => status switch
+    {
+        "Повітряна тривога" => "alert-danger",
+        "Ожеледиця" => "alert-warning",
+        "Потоп / Буря" => "alert-info",
+        _ => "alert-success"
+    };
+
+    private void Logout()
+    {
+        AuthService.Logout();
+        Navigation.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        // Коректно відписуємося при знищенні компонента
+        EmergencyService.OnChange -= OnEmergencyChanged;
+    }
+}

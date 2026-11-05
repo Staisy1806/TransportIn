@@ -1,0 +1,152 @@
+﻿@page "/manager-dashboard"
+@rendermode InteractiveServer
+@inject TransportIn.Services.AuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Кабінет Менеджера: @AuthService.CurrentUser?.FullName</h2>
+        <button class="btn btn-outline-danger btn-sm" @onclick="Logout">Вийти</button>
+    </div>
+
+    <div class="row">
+        <!-- Форма створення нового вантажу / замовлення -->
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h4 class="card-title text-primary mb-3">Новий вантаж</h4>
+
+                    <div class="mb-3">
+                        <label class="form-label">Опис вантажу:</label>
+                        <input type="text" class="form-control" @placeholder="Наприклад: Продукти харчування" @bind="newCargoTitle" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Пункт призначення:</label>
+                        <input type="text" class="form-control" @placeholder="Вулиця, склад..." @bind="newDestination" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Призначити водія:</label>
+                        <select class="form-select" @bind="selectedDriver">
+                            <option value="">-- Оберіть водія --</option>
+                            <option value="Водій: Іван">Водій: Іван (Бус Mercedes)</option>
+                            <option value="Водій: Петро">Водій: Петро (MAN)</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-primary w-100" @onclick="CreateCargo">Створити замовлення</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Таблиця поточних замовлень / вантажів -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title mb-3">Список активних вантажів</h4>
+
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Вантаж</th>
+                                <th>Пункт призначення</th>
+                                <th>Водій</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (cargoList.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">Немає активних вантажів</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var cargo in cargoList)
+                                {
+                                    <tr>
+                                        <td>@cargo.Id</td>
+                                        <td>@cargo.Title</td>
+                                        <td>@cargo.Destination</td>
+                                        <td>@cargo.Driver</td>
+                                        <td>
+                                            <span class="badge @GetBadgeClass(cargo.Status)">@cargo.Status</span>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Модель вантажу
+    private class CargoItem
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Destination { get; set; } = "";
+        public string Driver { get; set; } = "";
+        public string Status { get; set; } = "";
+    }
+
+    // Поля форми
+    private string newCargoTitle = "";
+    private string newDestination = "";
+    private string selectedDriver = "";
+
+    // Початковий список замовлень
+    private List<CargoItem> cargoList = new()
+    {
+        new CargoItem { Id = 1, Title = "Будівельні матеріали", Destination = "Склад №2 (Північний)", Driver = "Водій: Іван", Status = "В дорозі" },
+        new CargoItem { Id = 2, Title = "Медикаменти", Destination = "Центральна лікарня", Driver = "Водій: Петро", Status = "Формується" }
+    };
+
+    private void CreateCargo()
+    {
+        if (!string.IsNullOrEmpty(newCargoTitle) && !string.IsNullOrEmpty(newDestination) && !string.IsNullOrEmpty(selectedDriver))
+        {
+            var newItem = new CargoItem
+            {
+                Id = cargoList.Count + 1,
+                Title = newCargoTitle,
+                Destination = newDestination,
+                Driver = selectedDriver,
+                Status = "Формується"
+            };
+
+            cargoList.Add(newItem);
+
+            // Очищуємо поля форми
+            newCargoTitle = "";
+            newDestination = "";
+            selectedDriver = "";
+        }
+    }
+
+    private string GetBadgeClass(string status) => status switch
+    {
+        "В дорозі" => "bg-warning text-dark",
+        "Формується" => "bg-secondary",
+        "Доставлено" => "bg-success",
+        _ => "bg-primary"
+    };
+
+    private void Logout()
+    {
+        AuthSession();
+    }
+
+    private void AuthSession()
+    {
+        AuthService.Logout();
+        Navigation.NavigateTo("/");
+    }
+}

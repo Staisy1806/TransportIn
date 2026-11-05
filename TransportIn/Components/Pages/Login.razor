@@ -1,0 +1,68 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+@inject TransportIn.Services.AuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="container mt-5" style="max-width: 400px;">
+    <div class="card shadow">
+        <div class="card-body">
+            <h3 class="card-title text-center mb-4">Вхід у систему</h3>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">@errorMessage</div>
+            }
+
+            <div class="mb-3">
+                <label>Логін:</label>
+                <input type="text" class="form-control" @bind="username" placeholder="admin / manager / driver" />
+            </div>
+
+            <div class="mb-3">
+                <label>Пароль:</label>
+                <input type="password" class="form-control" @bind="password" placeholder="123" />
+            </div>
+
+            <button class="btn btn-primary w-100" @onclick="HandleLogin">Увійти</button>
+
+            <div class="mt-3 text-muted text-center" style="font-size: 0.9rem;">
+                <p>
+                    Швидкий вхід для тесту:<br>
+                    <b>admin</b> / 123 | <b>manager</b> / 123 | <b>driver</b> / 123
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string username = "";
+    private string password = "";
+    private string errorMessage = "";
+
+    private void HandleLogin()
+    {
+        var user = AuthService.Login(username, password);
+        if (user == null)
+        {
+            errorMessage = "Невірний логін або пароль!";
+        }
+        else
+        {
+            // Перенаправлення залежно від ролі
+            switch (user.Role)
+            {
+                case TransportIn.Models.UserRole.Admin:
+                    Navigation.NavigateTo("/admin-dashboard");
+                    break;
+                case TransportIn.Models.UserRole.Manager:
+                    Navigation.NavigateTo("/manager-dashboard");
+                    break;
+                case TransportIn.Models.UserRole.Driver:
+                    Navigation.NavigateTo("/driver-dashboard");
+                    break;
+            }
+        }
+    }
+}
