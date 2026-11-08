@@ -7,6 +7,10 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddSingleton<TransportIn.Services.AuthService>();
 builder.Services.AddSingleton<TransportIn.Services.EmergencyService>();
+builder.Services.AddSingleton<TransportIn.Services.FleetService>();
+builder.Services.AddSingleton<TransportIn.Services.OrderService>();
+builder.Services.AddSingleton<TransportIn.Services.ExpertRulesService>();
+builder.Services.AddSingleton<TransportIn.Services.EmployeeService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

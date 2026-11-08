@@ -1,152 +1,237 @@
 ﻿@page "/manager-dashboard"
 @rendermode InteractiveServer
 @inject TransportIn.Services.AuthService AuthService
+@inject TransportIn.Services.OrderService OrderService
+@inject TransportIn.Services.FleetService FleetService
+@implements IDisposable
 @inject NavigationManager Navigation
 
 <div class="container-fluid mt-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Кабінет Менеджера: @AuthService.CurrentUser?.FullName</h2>
         <button class="btn btn-outline-danger btn-sm" @onclick="Logout">Вийти</button>
     </div>
 
     <div class="row">
-        <!-- Форма створення нового вантажу / замовлення -->
-        <div class="col-md-4">
+        <!-- Ліва колонка: Створення замовлення -->
+        <div class="col-md-5">
             <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">📦 Створення нового замовлення</h5>
+                </div>
                 <div class="card-body">
-                    <h4 class="card-title text-primary mb-3">Новий вантаж</h4>
-
                     <div class="mb-3">
-                        <label class="form-label">Опис вантажу:</label>
-                        <input type="text" class="form-control" @placeholder="Наприклад: Продукти харчування" @bind="newCargoTitle" />
+                        <label class="form-label">Компанія-замовник</label>
+                        <input type="text" class="form-control" @bind="newOrder.CustomerCompany" placeholder="ТОВ 'Приклад'" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ім'я контактної особи та телефон</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" @bind="newOrder.CustomerName" placeholder="Ім'я" />
+                            <input type="text" class="form-control" @bind="newOrder.CustomerPhone" placeholder="0501234567" />
+                        </div>
                     </div>
 
+                    <hr />
+                    <h6>Характеристики вантажу</h6>
                     <div class="mb-3">
-                        <label class="form-label">Пункт призначення:</label>
-                        <input type="text" class="form-control" @placeholder="Вулиця, склад..." @bind="newDestination" />
+                        <label class="form-label">Назва вантажу</label>
+                        <input type="text" class="form-control" @bind="newOrder.CargoName" placeholder="Продукти харчування" />
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label class="form-label">Вага (т)</label>
+                            <input type="number" step="0.1" class="form-control" @bind="newOrder.WeightTons" />
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Об'єм (m³)</label>
+                            <input type="number" step="1" class="form-control" @bind="newOrder.VolumeM3" />
+                        </div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="refCheck" @bind="newOrder.RequiresRefrigerator" />
+                        <label class="form-check-label" for="refCheck">Потребує рефрижератора (температурний режим)</label>
                     </div>
 
+                    <hr />
+                    <!-- Мультиточки завантаження -->
                     <div class="mb-3">
-                        <label class="form-label">Призначити водія:</label>
-                        <select class="form-select" @bind="selectedDriver">
-                            <option value="">-- Оберіть водія --</option>
-                            <option value="Водій: Іван">Водій: Іван (Бус Mercedes)</option>
-                            <option value="Водій: Петро">Водій: Петро (MAN)</option>
-                        </select>
+                        <label class="form-label fw-bold">Пункти завантаження</label>
+                        @for (int i = 0; i < newOrder.LoadingPoints.Count; i++)
+                        {
+                            var index = i;
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" @bind="newOrder.LoadingPoints[index]" placeholder="Адреса завантаження" />
+                                <button class="btn btn-outline-danger" type="button" @onclick="() => newOrder.LoadingPoints.RemoveAt(index)">X</button>
+                            </div>
+                        }
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => newOrder.LoadingPoints.Add(string.Empty)">+ Додати точку завантаження</button>
                     </div>
 
-                    <button class="btn btn-primary w-100" @onclick="CreateCargo">Створити замовлення</button>
+                    <!-- Мультиточки доставки -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Пункти доставки</label>
+                        @for (int i = 0; i < newOrder.DeliveryPoints.Count; i++)
+                        {
+                            var index = i;
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" @bind="newOrder.DeliveryPoints[index]" placeholder="Адреса доставки" />
+                                <button class="btn btn-outline-danger" type="button" @onclick="() => newOrder.DeliveryPoints.RemoveAt(index)">X</button>
+                            </div>
+                        }
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => newOrder.DeliveryPoints.Add(string.Empty)">+ Додати точку доставки</button>
+                    </div>
+
+                    <button class="btn btn-success w-100 mt-2" @onclick="CreateOrder">Створити замовлення</button>
                 </div>
             </div>
         </div>
 
-        <!-- Таблиця поточних замовлень / вантажів -->
-        <div class="col-md-8">
+        <!-- Права колонка: Список замовлень та підбір авто -->
+        <div class="col-md-7">
             <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">📋 Активні замовлення та підбір транспорту</h5>
+                </div>
                 <div class="card-body">
-                    <h4 class="card-title mb-3">Список активних вантажів</h4>
+                    @if (!OrderService.GetAllOrders().Any())
+                    {
+                        <p class="text-muted">Ще немає створених замовлень.</p>
+                    }
+                    else
+                    {
+                        @foreach (var order in OrderService.GetAllOrders())
+                        {
+                            <div class="card mb-3 border-secondary">
+                                <div class="card-body">
+                                    <h5 class="card-title">Замовлення №@order.Id: @order.CargoName</h5>
+                                    <p class="mb-1"><strong>Замовник:</strong> @order.CustomerCompany (@order.CustomerName, @order.CustomerPhone)</p>
+                                    <p class="mb-1"><strong>Параметри:</strong> Вага: @order.WeightTons т | Об'єм: @order.VolumeM3 м³ | Рефрижератор: @(order.RequiresRefrigerator ? "Так" : "Ні")</p>
 
-                    <table class="table table-striped align-middle">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Вантаж</th>
-                                <th>Пункт призначення</th>
-                                <th>Водій</th>
-                                <th>Статус</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if (cargoList.Count == 0)
-                            {
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted">Немає активних вантажів</td>
-                                </tr>
-                            }
-                            else
-                            {
-                                @foreach (var cargo in cargoList)
-                                {
-                                    <tr>
-                                        <td>@cargo.Id</td>
-                                        <td>@cargo.Title</td>
-                                        <td>@cargo.Destination</td>
-                                        <td>@cargo.Driver</td>
-                                        <td>
-                                            <span class="badge @GetBadgeClass(cargo.Status)">@cargo.Status</span>
-                                        </td>
-                                    </tr>
-                                }
-                            }
-                        </tbody>
-                    </table>
+                                    <p class="mb-1 text-primary"><strong>Звідки:</strong> @string.Join(" ➔ ", order.LoadingPoints)</p>
+                                    <p class="mb-2 text-success"><strong>Куди:</strong> @string.Join(" ➔ ", order.DeliveryPoints)</p>
+
+                                    <p class="mb-2"><strong>Призначений транспорт:</strong> <span class="badge bg-info text-dark">@order.AssignedVehiclePlate</span></p>
+                                    <p class="mb-2"><strong>Статус:</strong> <span class="badge bg-warning text-dark">@order.Status</span></p>
+
+                                    <!-- Кнопка виклику підбору транспорту -->
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => SelectOrderForMatching(order)">
+                                        🔍 Підібрати транспорт автоматично
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    }
                 </div>
             </div>
+
+            <!-- Блок підбору автомобілів для обраного замовлення -->
+            @if (selectedOrderForMatching != null)
+            {
+                <div class="card shadow-sm mt-4 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Рекомендовані авто для замовлення №@selectedOrderForMatching.Id</h5>
+                    </div>
+                    <div class="card-body">
+                        @{
+                            var suitableVehicles = OrderService.GetSuitableVehicles(selectedOrderForMatching, FleetService.GetAllVehicles());
+                        }
+                        @if (!suitableVehicles.Any())
+                        {
+                            <div class="alert alert-danger mb-0">
+                                Не знайдено жодного автомобіля, що відповідає вимогам за вантажопідйомністю, об'ємом чи обладнанням! (Можливо, потрібна розбивка на кілька машин).
+                            </div>
+                        }
+                        else
+                        {
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Модель</th>
+                                        <th>Номер</th>
+                                        <th>Вантажопідйомність</th>
+                                        <th>Об'єм</th>
+                                        <th>Реф.</th>
+                                        <th>Дія</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var veh in suitableVehicles)
+                                    {
+                                        <tr>
+                                            <td>@veh.BrandModel</td>
+                                            <td>@veh.LicensePlate</td>
+                                            <td>@veh.CapacityTons т</td>
+                                            <td>@veh.VolumeM3 м³</td>
+                                            <td>@(veh.HasRefrigerator ? "Так" : "Ні")</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-success" @onclick="() => AssignVehicle(selectedOrderForMatching.Id, veh.LicensePlate)">
+                                                    Призначити
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                </div>
+            }
         </div>
     </div>
 </div>
 
 @code {
-    // Модель вантажу
-    private class CargoItem
+    private TransportIn.Models.Order newOrder = new()
     {
-        public int Id { get; set; }
-        public string Title { get; set; } = "";
-        public string Destination { get; set; } = "";
-        public string Driver { get; set; } = "";
-        public string Status { get; set; } = "";
-    }
-
-    // Поля форми
-    private string newCargoTitle = "";
-    private string newDestination = "";
-    private string selectedDriver = "";
-
-    // Початковий список замовлень
-    private List<CargoItem> cargoList = new()
-    {
-        new CargoItem { Id = 1, Title = "Будівельні матеріали", Destination = "Склад №2 (Північний)", Driver = "Водій: Іван", Status = "В дорозі" },
-        new CargoItem { Id = 2, Title = "Медикаменти", Destination = "Центральна лікарня", Driver = "Водій: Петро", Status = "Формується" }
+        LoadingPoints = new() { "" },
+        DeliveryPoints = new() { "" }
     };
 
-    private void CreateCargo()
+    private TransportIn.Models.Order? selectedOrderForMatching;
+
+    protected override void OnInitialized()
     {
-        if (!string.IsNullOrEmpty(newCargoTitle) && !string.IsNullOrEmpty(newDestination) && !string.IsNullOrEmpty(selectedDriver))
+        OrderService.OnChange += OnStateChanged;
+        FleetService.OnChange += OnStateChanged;
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private void CreateOrder()
+    {
+        if (string.IsNullOrWhiteSpace(newOrder.CustomerCompany) || string.IsNullOrWhiteSpace(newOrder.CargoName))
+            return;
+
+        OrderService.AddOrder(newOrder);
+        // Скидаємо форму
+        newOrder = new()
         {
-            var newItem = new CargoItem
-            {
-                Id = cargoList.Count + 1,
-                Title = newCargoTitle,
-                Destination = newDestination,
-                Driver = selectedDriver,
-                Status = "Формується"
-            };
-
-            cargoList.Add(newItem);
-
-            // Очищуємо поля форми
-            newCargoTitle = "";
-            newDestination = "";
-            selectedDriver = "";
-        }
+            LoadingPoints = new() { "" },
+            DeliveryPoints = new() { "" }
+        };
     }
 
-    private string GetBadgeClass(string status) => status switch
+    private void SelectOrderForMatching(TransportIn.Models.Order order)
     {
-        "В дорозі" => "bg-warning text-dark",
-        "Формується" => "bg-secondary",
-        "Доставлено" => "bg-success",
-        _ => "bg-primary"
-    };
+        selectedOrderForMatching = order;
+    }
+
+    private void AssignVehicle(int orderId, string plate)
+    {
+        OrderService.AssignVehicle(orderId, plate);
+        selectedOrderForMatching = null;
+    }
 
     private void Logout()
     {
-        AuthSession();
-    }
-
-    private void AuthSession()
-    {
         AuthService.Logout();
         Navigation.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        OrderService.OnChange -= OnStateChanged;
+        FleetService.OnChange -= OnStateChanged;
     }
 }

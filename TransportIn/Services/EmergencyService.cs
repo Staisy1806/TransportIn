@@ -18,6 +18,12 @@
             }
         }
 
+        public void SetEmergency(string emergencyType)
+        {
+            CurrentEmergency = emergencyType;
+            NotifyStateChanged();
+        }
+
         private void NotifyStateChanged()
         {
             // Безпечний виклик події для Blazor Server

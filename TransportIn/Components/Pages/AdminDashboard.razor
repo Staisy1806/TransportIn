@@ -1,214 +1,305 @@
 ﻿@page "/admin-dashboard"
 @rendermode InteractiveServer
 @inject TransportIn.Services.AuthService AuthService
-@inject NavigationManager Navigation
-@inject IJSRuntime JS
 @inject TransportIn.Services.EmergencyService EmergencyService
+@inject TransportIn.Services.FleetService FleetService
+@inject TransportIn.Services.ExpertRulesService ExpertRulesService
+@inject TransportIn.Services.EmployeeService EmployeeService
+@implements IDisposable
+@inject NavigationManager Navigation
 
 <div class="container-fluid mt-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>Кабінет Адміністратора: @AuthService.CurrentUser?.FullName</h2>
+    <!-- Шапка панелі адміністратора -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Панель Адміністратора: @AuthService.CurrentUser?.FullName</h2>
         <button class="btn btn-outline-danger btn-sm" @onclick="Logout">Вийти</button>
     </div>
 
-    <!-- Вкладки (Tabs) -->
-    <ul class="nav nav-tabs" id="adminTabs" role="tablist">
-        <li class="nav-item">
-            <button class="nav-link @(activeTab == 1 ? "active" : "")" @onclick="() => activeTab = 1">Працівники</button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @(activeTab == 2 ? "active" : "")" @onclick="() => activeTab = 2">Мапа міста та Форс-мажори</button>
-        </li>
-    </ul>
-
-    <div class="tab-content border border-top-0 p-4 bg-white shadow-sm">
-        @if (activeTab == 1)
-        {
-            <!-- Вкладка 1: Реєстрація працівників -->
-            <h4>Реєстрація нового працівника</h4>
-            <div class="row g-3 mb-4" style="max-width: 600px;">
-                <div class="col-md-6">
-                    <label>Логін:</label>
-                    <input type="text" class="form-control" @bind="newUsername" />
-                </div>
-                <div class="col-md-6">
-                    <label>Пароль:</label>
-                    <input type="text" class="form-control" @bind="newPassword" />
-                </div>
-                <div class="col-md-6">
-                    <label>ПІБ:</label>
-                    <input type="text" class="form-control" @bind="newFullName" />
-                </div>
-                <div class="col-md-6">
-                    <label>Телефон:</label>
-                    <input type="text" class="form-control" @bind="newPhone" />
-                </div>
-                <div class="col-md-12">
-                    <label>Роль:</label>
-                    <select class="form-select" @bind="newRole">
-                        <option value="@TransportIn.Models.UserRole.Manager">Менеджер</option>
-                        <option value="@TransportIn.Models.UserRole.Driver">Водій</option>
-                        <option value="@TransportIn.Models.UserRole.Admin">Адмін</option>
-                    </select>
-                </div>
-                <div class="col-md-12">
-                    <button class="btn btn-success" @onclick="RegisterNewEmployee">Зареєструвати працівника</button>
-                </div>
-            </div>
-
-            <hr />
-            <h5>Список усіх працівників</h5>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>ПІБ</th>
-                        <th>Логін</th>
-                        <th>Роль</th>
-                        <th>Телефон</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var user in AuthService.GetAllUsers())
-                    {
-                        <tr>
-                            <td>@user.FullName</td>
-                            <td>@user.Username</td>
-                            <td><span class="badge bg-secondary">@user.Role</span></td>
-                            <td>@user.Phone</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
-        else if (activeTab == 2)
-        {
-            <!-- Вкладка 2: Мапа з фільтрами та форс-мажорами -->
-            <h4>Моніторинг транспорту та Керування ситуацією</h4>
-
-            <!-- Панель чекбоксів (фільтрів) -->
-            <div class="mb-3 p-2 bg-light rounded border d-flex gap-4">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="chkWarehouses" @bind="showWarehouses" @bind:after="RefreshMapMarkers" />
-                    <label class="form-check-label fw-bold" for="chkWarehouses">🏢 Показати склади</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="chkDrivers" @bind="showDrivers" @bind:after="RefreshMapMarkers" />
-                    <label class="form-check-label fw-bold" for="chkDrivers">🚚 Показати водіїв (машини)</label>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-8">
-                    <div id="map" style="height: 450px; width: 100%; border-radius: 8px;" class="shadow-sm"></div>
-                </div>
+    <!-- Модуль симуляції надзвичайних/гібридних загроз -->
+    <div class="card shadow-sm mb-4 border-danger">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">🚨 Симуляція гібридних загроз та дорожніх подій</h5>
+        </div>
+        <div class="card-body">
+            <div class="row align-items-center">
                 <div class="col-md-4">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h5 class="card-title text-danger">Панель надзвичайних ситуацій</h5>
-                            <p class="text-muted small">Зміна налаштувань миттєво блокує або змінює маршрути водіїв.</p>
-
-                            <div class="d-grid gap-2">
-                                <button class="btn btn-danger" @onclick='() => ToggleEmergency("Повітряна тривога")'>🔴 Увімкнути Тривогу</button>
-                                <button class="btn btn-warning" @onclick='() => ToggleEmergency("Ожеледиця")'>🟡 Ожеледиця (Швидкість знижено)</button>
-                                <button class="btn btn-info text-white" @onclick='() => ToggleEmergency("Потоп / Буря")'>🔵 Потоп / Буря</button>
-                                <button class="btn btn-outline-success" @onclick='() => ToggleEmergency("Нормальний режим")'>🟢 Зняти всі обмеження</button>
-                            </div>
-
-                            <hr />
-                            <p class="small"><b>Активний статус:</b> <span class="text-danger">@currentEmergency</span></p>
-                        </div>
+                    <label class="form-label fw-bold">Поточна глобальна загроза:</label>
+                    <span class="badge bg-warning text-dark fs-6 ms-2">@EmergencyService.CurrentEmergency</span>
+                </div>
+                <div class="col-md-8">
+                    <div class="btn-group flex-wrap" role="group">
+                        <button class="btn btn-outline-success btn-sm m-1" @onclick='() => SetEmergency("Спокійно")'>Зняти тривогу</button>
+                        <button class="btn btn-outline-danger btn-sm m-1" @onclick='() => SetEmergency("Повітряна тривога")'>Повітряна тривога</button>
+                        <button class="btn btn-outline-warning btn-sm m-1" @onclick='() => SetEmergency("Ожеледиця")'>Ожеледиця</button>
+                        <button class="btn btn-outline-secondary btn-sm m-1" @onclick='() => SetEmergency("Перекриття мостів")'>Закриття мостів</button>
                     </div>
                 </div>
             </div>
-        }
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Секція 1: Управління автопарком (Транспортні засоби) -->
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">🚛 Управління автопарком підприємства</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Форма додавання машини -->
+                    <div class="row g-2 mb-3 bg-light p-2 rounded">
+                        <div class="col-md-2">
+                            <input type="text" class="form-control form-control-sm" @bind="newVehicle.BrandModel" placeholder="Марка, модель" />
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" class="form-control form-control-sm" @bind="newVehicle.LicensePlate" placeholder="Держномер (AA 1234 ВР)" />
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" class="form-control form-control-sm" @bind="newVehicle.VinCode" placeholder="VIN-код (17 символів)" />
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" @bind="newVehicle.BodyType">
+                                <option value="Тент">Тент</option>
+                                <option value="Рефрижератор">Рефрижератор</option>
+                                <option value="Цільнометалічний фургон">Фургон</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <input type="number" step="0.5" class="form-control form-control-sm" @bind="newVehicle.CapacityTons" placeholder="Тонн" />
+                        </div>
+                        <div class="col-md-1">
+                            <input type="number" class="form-control form-control-sm" @bind="newVehicle.VolumeM3" placeholder="м³" />
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-sm btn-success w-100" @onclick="AddNewVehicle">+ Додати авто</button>
+                        </div>
+                    </div>
+
+                    <!-- Таблиця автопарку -->
+                    <table class="table table-sm table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Модель</th>
+                                <th>Держномер</th>
+                                <th>VIN-код</th>
+                                <th>Тип кузова</th>
+                                <th>Вантажопідйомність</th>
+                                <th>Об'єм</th>
+                                <th>Реф.</th>
+                                <th>Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var veh in FleetService.GetAllVehicles())
+                            {
+                                <tr>
+                                    <td>@veh.Id</td>
+                                    <td><strong>@veh.BrandModel</strong></td>
+                                    <td><code>@veh.LicensePlate</code></td>
+                                    <td><small>@veh.VinCode</small></td>
+                                    <td>@veh.BodyType</td>
+                                    <td>@veh.CapacityTons т</td>
+                                    <td>@veh.VolumeM3 м³</td>
+                                    <td>@(veh.HasRefrigerator ? "✅" : "❌")</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger py-0" @onclick="() => FleetService.DeleteVehicle(veh.Id)">Видалити</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Секція 2: Управління працівниками та водіями -->
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">👥 Управління працівниками та водіями</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Форма додавання працівника -->
+                    <div class="row g-2 mb-3 bg-light p-2 rounded">
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm" @bind="newEmp.FullName" placeholder="ПІБ працівника" />
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" @bind="newEmp.Role">
+                                <option value="Водій">Водій</option>
+                                <option value="Менеджер">Менеджер</option>
+                                <option value="Адміністратор">Адміністратор</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" class="form-control form-control-sm" @bind="newEmp.Phone" placeholder="Телефон" />
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" class="form-control form-control-sm" @bind="newEmp.LicenseCategory" placeholder="Категорії (C, CE)" />
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-sm btn-success w-100" @onclick="AddNewEmployee">+ Додати працівника</button>
+                        </div>
+                    </div>
+
+                    <!-- Таблиця працівників -->
+                    <table class="table table-sm table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>ПІБ</th>
+                                <th>Роль</th>
+                                <th>Телефон</th>
+                                <th>Категорії прав</th>
+                                <th>Термін медкнижки</th>
+                                <th>Статус</th>
+                                <th>Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var emp in EmployeeService.GetAllEmployees())
+                            {
+                                <tr>
+                                    <td>@emp.Id</td>
+                                    <td><strong>@emp.FullName</strong></td>
+                                    <td><span class="badge bg-secondary">@emp.Role</span></td>
+                                    <td>@emp.Phone</td>
+                                    <td><code>@emp.LicenseCategory</code></td>
+                                    <td>@emp.MedicalCertExpiry</td>
+                                    <td>
+                                        <span class="badge @(emp.IsActive ? "bg-success" : "bg-danger")">
+                                            @(emp.IsActive ? "Активний" : "Заблокований")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger py-0" @onclick="() => EmployeeService.DeleteEmployee(emp.Id)">Видалити</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Секція 3: База експертних знань -->
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">🧠 База експертних знань та правил реагування на загрози</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-3 bg-light p-2 rounded">
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm" @bind="newRule.ThreatType" placeholder="Тип загрози" />
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm" @bind="newRule.Condition" placeholder="Умова застосування" />
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" class="form-control form-control-sm" @bind="newRule.ActionRecommendation" placeholder="Рекомендована дія системи" />
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-sm btn-success w-100" @onclick="AddExpertRule">+ Додати правило</button>
+                        </div>
+                    </div>
+
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Загроза</th>
+                                <th>Умова</th>
+                                <th>Рекомендація</th>
+                                <th>Пріоритет</th>
+                                <th>Дія</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rule in ExpertRulesService.GetAllRules())
+                            {
+                                <tr>
+                                    <td><strong>@rule.ThreatType</strong></td>
+                                    <td>@rule.Condition</td>
+                                    <td>@rule.ActionRecommendation</td>
+                                    <td>
+                                        <span class="badge @(rule.Priority == "Критичний" ? "bg-danger" : "bg-warning text-dark")">
+                                            @rule.Priority
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger py-0" @onclick="() => ExpertRulesService.DeleteRule(rule.Id)">Видалити</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 @code {
-    private int activeTab = 1;
+    private TransportIn.Models.Vehicle newVehicle = new();
+    private TransportIn.Services.Employee newEmp = new();
+    private TransportIn.Services.ExpertRule newRule = new();
 
-    // Поля форми нового юзера
-    private string newUsername = "";
-    private string newPassword = "";
-    private string newFullName = "";
-    private string newPhone = "";
-    private TransportIn.Models.UserRole newRole = TransportIn.Models.UserRole.Driver;
-    private string currentEmergency = "Нормальний режим";
-
-    // Стан фільтрів на мапі
-    private bool showWarehouses = true;
-    private bool showDrivers = true;
-
-    // Модель для об'єктів на мапі
-    private class MapItemDto
+    protected override void OnInitialized()
     {
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
-        public string Type { get; set; } = ""; // "Склад" або "Водій"
-        public double Lat { get; set; }
-        public double Lng { get; set; }
-        public string Status { get; set; } = "";
+        EmergencyService.OnChange += OnStateChanged;
+        FleetService.OnChange += OnStateChanged;
+        ExpertRulesService.OnChange += OnStateChanged;
+        EmployeeService.OnChange += OnStateChanged;
     }
 
-    // Тестові дані (склади та водії)
-    private List<MapItemDto> allMapItems = new()
-    {
-        new MapItemDto { Id = 1, Name = "Склад №1 (Центральний)", Type = "Склад", Lat = 50.4501, Lng = 30.5234, Status = "Працює в штатному режимі" },
-        new MapItemDto { Id = 2, Name = "Склад №2 (Північний логістичний хаб)", Type = "Склад", Lat = 50.4801, Lng = 30.4834, Status = "Обмежено через тривогу" },
-        new MapItemDto { Id = 3, Name = "Бус Mercedes (Водій: Іван)", Type = "Водій", Lat = 50.4551, Lng = 30.5334, Status = "В дорозі до отримувача" },
-        new MapItemDto { Id = 4, Name = "Рефрижератор MAN (Водій: Петро)", Type = "Водій", Lat = 50.4401, Lng = 30.5134, Status = "Завантаження на складі" }
-    };
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
 
-    private bool mapInitialized = false;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private void SetEmergency(string emergencyType)
     {
-        if (activeTab == 2)
+        EmergencyService.SetEmergency(emergencyType);
+    }
+
+    private void AddNewVehicle()
+    {
+        if (string.IsNullOrWhiteSpace(newVehicle.BrandModel) || string.IsNullOrWhiteSpace(newVehicle.LicensePlate))
+            return;
+
+        if (newVehicle.BodyType == "Рефрижератор")
         {
-            if (!mapInitialized)
-            {
-                // Ініціалізуємо мапу один раз при переході на вкладку
-                await JS.InvokeVoidAsync("leafletMapFunctions.initMap", "map", 50.4501, 30.5234, 13);
-                mapInitialized = true;
-            }
-            // Оновлюємо маркери з урахуванням поточних фільтрів
-            await RefreshMapMarkers();
+            newVehicle.HasRefrigerator = true;
         }
-        else
-        {
-            mapInitialized = false; // Скидаємо прапорець, якщо вийшли з вкладки
-        }
+
+        FleetService.AddVehicle(newVehicle);
+        newVehicle = new();
     }
 
-    private async Task RefreshMapMarkers()
+    private void AddNewEmployee()
     {
-        // Фільтруємо дані залежно від стану чекбоксів
-        var filteredItems = allMapItems.Where(i =>
-            (i.Type == "Склад" && showWarehouses) ||
-            (i.Type == "Водій" && showDrivers)
-        ).ToList();
-
-        await JS.InvokeVoidAsync("leafletMapFunctions.updateMarkers", filteredItems);
+        if (string.IsNullOrWhiteSpace(newEmp.FullName)) return;
+        EmployeeService.AddEmployee(newEmp);
+        newEmp = new();
     }
 
-    private void RegisterNewEmployee()
+    private void AddExpertRule()
     {
-        if (!string.IsNullOrEmpty(newUsername) && !string.IsNullOrEmpty(newPassword))
-        {
-            AuthService.RegisterUser(newUsername, newPassword, newRole, newFullName, newPhone);
-            newUsername = newPassword = newFullName = newPhone = "";
-        }
-    }
+        if (string.IsNullOrWhiteSpace(newRule.ThreatType)) return;
 
-    private void ToggleEmergency(string status)
-    {
-        currentEmergency = status;
-        EmergencyService.CurrentEmergency = status; // Вот этого не хватало! Обновляем глобально
+        ExpertRulesService.AddRule(newRule);
+        newRule = new();
     }
 
     private void Logout()
     {
         AuthService.Logout();
         Navigation.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        EmergencyService.OnChange -= OnStateChanged;
+        FleetService.OnChange -= OnStateChanged;
+        ExpertRulesService.OnChange -= OnStateChanged;
+        EmployeeService.OnChange -= OnStateChanged;
     }
 }
