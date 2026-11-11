@@ -1,4 +1,5 @@
 ﻿@page "/admin-dashboard"
+@layout TransportIn.Components.Layout.AdminLayout
 @rendermode InteractiveServer
 @inject TransportIn.Services.AuthService AuthService
 @inject TransportIn.Services.EmergencyService EmergencyService
@@ -8,236 +9,350 @@
 @implements IDisposable
 @inject NavigationManager Navigation
 
-<div class="container-fluid mt-3">
-    <!-- Шапка панелі адміністратора -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Панель Адміністратора: @AuthService.CurrentUser?.FullName</h2>
-        <button class="btn btn-outline-danger btn-sm" @onclick="Logout">Вийти</button>
-    </div>
 
-    <!-- Модуль симуляції надзвичайних/гібридних загроз -->
-    <div class="card shadow-sm mb-4 border-danger">
-        <div class="card-header bg-danger text-white">
-            <h5 class="mb-0">🚨 Симуляція гібридних загроз та дорожніх подій</h5>
+<div class="admin-layout">
+    <!-- ===== САЙДБАР ===== -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">
+            <h4><i class="bi bi-truck-front-fill"></i> TransportIn</h4>
+            <small>Диспетчерський пульт</small>
         </div>
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-4">
-                    <label class="form-label fw-bold">Поточна глобальна загроза:</label>
-                    <span class="badge bg-warning text-dark fs-6 ms-2">@EmergencyService.CurrentEmergency</span>
+        <nav class="mt-3">
+            <a class="nav-link active" href="/admin-dashboard">
+                <i class="bi bi-grid-1x2-fill"></i> Панель адміна
+            </a>
+            <a class="nav-link" href="/manager-dashboard">
+                <i class="bi bi-people-fill"></i> Менеджер
+            </a>
+            <a class="nav-link" href="/driver-dashboard">
+                <i class="bi bi-person-badge-fill"></i> Водій
+            </a>
+            <a class="nav-link" href="/counter">
+                <i class="bi bi-graph-up-arrow"></i> Аналітика
+            </a>
+        </nav>
+    </aside>
+
+    <!-- ===== ОСНОВНИЙ КОНТЕНТ ===== -->
+    <main class="admin-main">
+        <!-- Верхня панель -->
+        <div class="top-navbar">
+            <div>
+                <h5 class="mb-0" style="font-weight: 600; color: var(--text-primary);">Панель адміністратора</h5>
+                <small style="color: var(--text-secondary);">Управління системою та моніторинг загроз</small>
+            </div>
+            <div class="user-info">
+                <div class="text-end d-none d-sm-block">
+                    <div class="user-name">@AuthService.CurrentUser?.FullName</div>
+                    <div class="user-role">Головний диспетчер</div>
                 </div>
-                <div class="col-md-8">
-                    <div class="btn-group flex-wrap" role="group">
-                        <button class="btn btn-outline-success btn-sm m-1" @onclick='() => SetEmergency("Спокійно")'>Зняти тривогу</button>
-                        <button class="btn btn-outline-danger btn-sm m-1" @onclick='() => SetEmergency("Повітряна тривога")'>Повітряна тривога</button>
-                        <button class="btn btn-outline-warning btn-sm m-1" @onclick='() => SetEmergency("Ожеледиця")'>Ожеледиця</button>
-                        <button class="btn btn-outline-secondary btn-sm m-1" @onclick='() => SetEmergency("Перекриття мостів")'>Закриття мостів</button>
+                <div class="user-avatar">
+                    @GetInitials(AuthService.CurrentUser?.FullName)
+                </div>
+                <button class="btn-logout" @onclick="Logout">
+                    <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Вийти</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="content-section">
+            <!-- Картки статистики -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="bi bi-truck"></i></div>
+                    <div>
+                        <div class="stat-value">@FleetService.GetAllVehicles().Count</div>
+                        <div class="stat-label">Одиниць техніки</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="bi bi-people"></i></div>
+                    <div>
+                        <div class="stat-value">@EmployeeService.GetAllEmployees().Count</div>
+                        <div class="stat-label">Працівників в системі</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon amber"><i class="bi bi-shield-check"></i></div>
+                    <div>
+                        <div class="stat-value">@ExpertRulesService.GetAllRules().Count</div>
+                        <div class="stat-label">Активних правил безпеки</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon @(GetEmergencyIconColor())"><i class="bi @(GetEmergencyIcon())"></i></div>
+                    <div>
+                        <div class="stat-value">@GetEmergencyLevel()</div>
+                        <div class="stat-label">Поточний рівень загрози</div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div class="row">
-        <!-- Секція 1: Управління автопарком (Транспортні засоби) -->
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">🚛 Управління автопарком підприємства</h5>
+            <!-- МОДУЛЬ ЗАГРОЗ -->
+            <div class="emergency-panel">
+                <div class="emergency-header">
+                    <h5><i class="bi bi-radar"></i> Симуляція гібридних загроз</h5>
+                    <span class="emergency-status @GetEmergencyClass()">
+                        <i class="bi @GetEmergencyIcon()"></i>
+                        @EmergencyService.CurrentEmergency
+                    </span>
                 </div>
-                <div class="card-body">
-                    <!-- Форма додавання машини -->
-                    <div class="row g-2 mb-3 bg-light p-2 rounded">
-                        <div class="col-md-2">
-                            <input type="text" class="form-control form-control-sm" @bind="newVehicle.BrandModel" placeholder="Марка, модель" />
-                        </div>
-                        <div class="col-md-2">
-                            <input type="text" class="form-control form-control-sm" @bind="newVehicle.LicensePlate" placeholder="Держномер (AA 1234 ВР)" />
-                        </div>
-                        <div class="col-md-2">
-                            <input type="text" class="form-control form-control-sm" @bind="newVehicle.VinCode" placeholder="VIN-код (17 символів)" />
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-select form-select-sm" @bind="newVehicle.BodyType">
-                                <option value="Тент">Тент</option>
-                                <option value="Рефрижератор">Рефрижератор</option>
-                                <option value="Цільнометалічний фургон">Фургон</option>
-                            </select>
-                        </div>
-                        <div class="col-md-1">
-                            <input type="number" step="0.5" class="form-control form-control-sm" @bind="newVehicle.CapacityTons" placeholder="Тонн" />
-                        </div>
-                        <div class="col-md-1">
-                            <input type="number" class="form-control form-control-sm" @bind="newVehicle.VolumeM3" placeholder="м³" />
-                        </div>
-                        <div class="col-md-2">
-                            <button class="btn btn-sm btn-success w-100" @onclick="AddNewVehicle">+ Додати авто</button>
+                <div class="emergency-body">
+                    <button class="emergency-btn btn-calm" @onclick='() => SetEmergency("Спокійно")'>
+                        <i class="bi bi-check-circle-fill"></i> Зняти тривогу
+                    </button>
+                    <button class="emergency-btn btn-air" @onclick='() => SetEmergency("Повітряна тривога")'>
+                        <i class="bi bi-airplane-fill"></i> Повітряна тривога
+                    </button>
+                    <button class="emergency-btn btn-ice" @onclick='() => SetEmergency("Ожеледиця")'>
+                        <i class="bi bi-snow2"></i> Ожеледиця
+                    </button>
+                    <button class="emergency-btn btn-bridge" @onclick='() => SetEmergency("Перекриття мостів")'>
+                        <i class="bi bi-sign-stop-fill"></i> Закриття мостів
+                    </button>
+                </div>
+            </div>
+
+            <!-- Секція: Автопарк -->
+            <div class="modern-card">
+                <div class="card-header-custom">
+                    <h5>
+                        <span class="header-icon blue"><i class="bi bi-truck"></i></span>
+                        Управління автопарком
+                    </h5>
+                    <span class="badge-count">@FleetService.GetAllVehicles().Count од.</span>
+                </div>
+                <div class="card-body-custom">
+                    <div class="form-add-row">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-xl-2 col-md-4">
+                                <label class="form-label">Марка, модель</label>
+                                <input type="text" class="form-control" @bind="newVehicle.BrandModel" placeholder="Volvo FH16" />
+                            </div>
+                            <div class="col-xl-2 col-md-4">
+                                <label class="form-label">Держномер</label>
+                                <input type="text" class="form-control" @bind="newVehicle.LicensePlate" placeholder="AA 1234 ВР" />
+                            </div>
+                            <div class="col-xl-2 col-md-4">
+                                <label class="form-label">VIN-код</label>
+                                <input type="text" class="form-control" @bind="newVehicle.VinCode" placeholder="17 символів" />
+                            </div>
+                            <div class="col-xl-2 col-md-4">
+                                <label class="form-label">Тип кузова</label>
+                                <select class="form-select" @bind="newVehicle.BodyType">
+                                    <option value="Тент">Тент</option>
+                                    <option value="Рефрижератор">Рефрижератор</option>
+                                    <option value="Цільнометалічний фургон">Фургон</option>
+                                </select>
+                            </div>
+                            <div class="col-xl-1 col-md-4">
+                                <label class="form-label">Тонн</label>
+                                <input type="number" step="0.5" class="form-control" @bind="newVehicle.CapacityTons" placeholder="20" />
+                            </div>
+                            <div class="col-xl-1 col-md-4">
+                                <label class="form-label">м³</label>
+                                <input type="number" class="form-control" @bind="newVehicle.VolumeM3" placeholder="86" />
+                            </div>
+                            <div class="col-xl-2 col-md-4">
+                                <button class="btn-modern btn-add w-100" @onclick="AddNewVehicle">
+                                    <i class="bi bi-plus-lg"></i> Додати
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Таблиця автопарку -->
-                    <table class="table table-sm table-striped align-middle">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Модель</th>
-                                <th>Держномер</th>
-                                <th>VIN-код</th>
-                                <th>Тип кузова</th>
-                                <th>Вантажопідйомність</th>
-                                <th>Об'єм</th>
-                                <th>Реф.</th>
-                                <th>Дії</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var veh in FleetService.GetAllVehicles())
-                            {
+                    <div class="table-responsive">
+                        <table class="modern-table">
+                            <thead>
                                 <tr>
-                                    <td>@veh.Id</td>
-                                    <td><strong>@veh.BrandModel</strong></td>
-                                    <td><code>@veh.LicensePlate</code></td>
-                                    <td><small>@veh.VinCode</small></td>
-                                    <td>@veh.BodyType</td>
-                                    <td>@veh.CapacityTons т</td>
-                                    <td>@veh.VolumeM3 м³</td>
-                                    <td>@(veh.HasRefrigerator ? "✅" : "❌")</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-danger py-0" @onclick="() => FleetService.DeleteVehicle(veh.Id)">Видалити</button>
-                                    </td>
+                                    <th>ID</th>
+                                    <th>Модель</th>
+                                    <th>Держномер</th>
+                                    <th>VIN</th>
+                                    <th>Тип</th>
+                                    <th>Вантаж.</th>
+                                    <th>Об'єм</th>
+                                    <th>Реф.</th>
+                                    <th>Дії</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach (var veh in FleetService.GetAllVehicles())
+                                {
+                                    <tr>
+                                        <td><span class="badge-modern badge-secondary">@veh.Id</span></td>
+                                        <td><strong>@veh.BrandModel</strong></td>
+                                        <td><span class="code-text">@veh.LicensePlate</span></td>
+                                        <td style="color: var(--text-secondary); font-size: 0.85rem;">@veh.VinCode</td>
+                                        <td><span class="badge-modern badge-primary">@veh.BodyType</span></td>
+                                        <td>@veh.CapacityTons т</td>
+                                        <td>@veh.VolumeM3 м³</td>
+                                        <td>@(veh.HasRefrigerator ? "✅" : "—")</td>
+                                        <td>
+                                            <button class="btn-modern btn-danger-modern" @onclick="() => FleetService.DeleteVehicle(veh.Id)" title="Видалити">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Секція 2: Управління працівниками та водіями -->
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">👥 Управління працівниками та водіями</h5>
+            <!-- Секція: Працівники -->
+            <div class="modern-card">
+                <div class="card-header-custom">
+                    <h5>
+                        <span class="header-icon green"><i class="bi bi-people"></i></span>
+                        Управління персоналом
+                    </h5>
+                    <span class="badge-count">@EmployeeService.GetAllEmployees().Count осіб</span>
                 </div>
-                <div class="card-body">
-                    <!-- Форма додавання працівника -->
-                    <div class="row g-2 mb-3 bg-light p-2 rounded">
-                        <div class="col-md-3">
-                            <input type="text" class="form-control form-control-sm" @bind="newEmp.FullName" placeholder="ПІБ працівника" />
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-select form-select-sm" @bind="newEmp.Role">
-                                <option value="Водій">Водій</option>
-                                <option value="Менеджер">Менеджер</option>
-                                <option value="Адміністратор">Адміністратор</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <input type="text" class="form-control form-control-sm" @bind="newEmp.Phone" placeholder="Телефон" />
-                        </div>
-                        <div class="col-md-2">
-                            <input type="text" class="form-control form-control-sm" @bind="newEmp.LicenseCategory" placeholder="Категорії (C, CE)" />
-                        </div>
-                        <div class="col-md-3">
-                            <button class="btn btn-sm btn-success w-100" @onclick="AddNewEmployee">+ Додати працівника</button>
+                <div class="card-body-custom">
+                    <div class="form-add-row">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-xl-3 col-md-6">
+                                <label class="form-label">ПІБ</label>
+                                <input type="text" class="form-control" @bind="newEmp.FullName" placeholder="Іванов Іван Іванович" />
+                            </div>
+                            <div class="col-xl-2 col-md-6">
+                                <label class="form-label">Роль</label>
+                                <select class="form-select" @bind="newEmp.Role">
+                                    <option value="Водій">Водій</option>
+                                    <option value="Менеджер">Менеджер</option>
+                                    <option value="Адміністратор">Адміністратор</option>
+                                </select>
+                            </div>
+                            <div class="col-xl-2 col-md-6">
+                                <label class="form-label">Телефон</label>
+                                <input type="text" class="form-control" @bind="newEmp.Phone" placeholder="+380..." />
+                            </div>
+                            <div class="col-xl-2 col-md-6">
+                                <label class="form-label">Категорії прав</label>
+                                <input type="text" class="form-control" @bind="newEmp.LicenseCategory" placeholder="C, CE" />
+                            </div>
+                            <div class="col-xl-3 col-md-12">
+                                <button class="btn-modern btn-add w-100" @onclick="AddNewEmployee">
+                                    <i class="bi bi-person-plus-fill"></i> Додати працівника
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Таблиця працівників -->
-                    <table class="table table-sm table-striped align-middle">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>ПІБ</th>
-                                <th>Роль</th>
-                                <th>Телефон</th>
-                                <th>Категорії прав</th>
-                                <th>Термін медкнижки</th>
-                                <th>Статус</th>
-                                <th>Дії</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var emp in EmployeeService.GetAllEmployees())
-                            {
+                    <div class="table-responsive">
+                        <table class="modern-table">
+                            <thead>
                                 <tr>
-                                    <td>@emp.Id</td>
-                                    <td><strong>@emp.FullName</strong></td>
-                                    <td><span class="badge bg-secondary">@emp.Role</span></td>
-                                    <td>@emp.Phone</td>
-                                    <td><code>@emp.LicenseCategory</code></td>
-                                    <td>@emp.MedicalCertExpiry</td>
-                                    <td>
-                                        <span class="badge @(emp.IsActive ? "bg-success" : "bg-danger")">
-                                            @(emp.IsActive ? "Активний" : "Заблокований")
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-danger py-0" @onclick="() => EmployeeService.DeleteEmployee(emp.Id)">Видалити</button>
-                                    </td>
+                                    <th>ID</th>
+                                    <th>ПІБ</th>
+                                    <th>Роль</th>
+                                    <th>Телефон</th>
+                                    <th>Категорії</th>
+                                    <th>Медкнижка</th>
+                                    <th>Статус</th>
+                                    <th>Дії</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach (var emp in EmployeeService.GetAllEmployees())
+                                {
+                                    <tr>
+                                        <td><span class="badge-modern badge-secondary">@emp.Id</span></td>
+                                        <td><strong>@emp.FullName</strong></td>
+                                        <td><span class="badge-modern badge-secondary">@emp.Role</span></td>
+                                        <td>@emp.Phone</td>
+                                        <td><span class="code-text">@emp.LicenseCategory</span></td>
+                                        <td>@emp.MedicalCertExpiry</td>
+                                        <td>
+                                            <span class="badge-modern @(emp.IsActive ? "badge-success" : "badge-danger")">
+                                                <i class="bi @(emp.IsActive ? "bi-check-circle-fill" : "bi-x-circle-fill")"></i>
+                                                @(emp.IsActive ? "Активний" : "Заблокований")
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn-modern btn-danger-modern" @onclick="() => EmployeeService.DeleteEmployee(emp.Id)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Секція 3: База експертних знань -->
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-dark text-white">
-                    <h5 class="mb-0">🧠 База експертних знань та правил реагування на загрози</h5>
+            <!-- Секція: Експертні правила -->
+            <div class="modern-card">
+                <div class="card-header-custom">
+                    <h5>
+                        <span class="header-icon amber"><i class="bi bi-brain"></i></span>
+                        База експертних знань
+                    </h5>
+                    <span class="badge-count">@ExpertRulesService.GetAllRules().Count правил</span>
                 </div>
-                <div class="card-body">
-                    <div class="row g-2 mb-3 bg-light p-2 rounded">
-                        <div class="col-md-3">
-                            <input type="text" class="form-control form-control-sm" @bind="newRule.ThreatType" placeholder="Тип загрози" />
-                        </div>
-                        <div class="col-md-3">
-                            <input type="text" class="form-control form-control-sm" @bind="newRule.Condition" placeholder="Умова застосування" />
-                        </div>
-                        <div class="col-md-4">
-                            <input type="text" class="form-control form-control-sm" @bind="newRule.ActionRecommendation" placeholder="Рекомендована дія системи" />
-                        </div>
-                        <div class="col-md-2">
-                            <button class="btn btn-sm btn-success w-100" @onclick="AddExpertRule">+ Додати правило</button>
+                <div class="card-body-custom">
+                    <div class="form-add-row">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-xl-3 col-md-4">
+                                <label class="form-label">Тип загрози</label>
+                                <input type="text" class="form-control" @bind="newRule.ThreatType" placeholder="Повітряна тривога" />
+                            </div>
+                            <div class="col-xl-3 col-md-4">
+                                <label class="form-label">Умова спрацювання</label>
+                                <input type="text" class="form-control" @bind="newRule.Condition" placeholder="Тривога в регіоні маршруту" />
+                            </div>
+                            <div class="col-xl-4 col-md-4">
+                                <label class="form-label">Рекомендація системи</label>
+                                <input type="text" class="form-control" @bind="newRule.ActionRecommendation" placeholder="Зупинити рух, укритися" />
+                            </div>
+                            <div class="col-xl-2 col-md-12">
+                                <button class="btn-modern btn-add w-100" @onclick="AddExpertRule">
+                                    <i class="bi bi-plus-lg"></i> Додати правило
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <table class="table table-sm table-hover">
-                        <thead>
-                            <tr>
-                                <th>Загроза</th>
-                                <th>Умова</th>
-                                <th>Рекомендація</th>
-                                <th>Пріоритет</th>
-                                <th>Дія</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var rule in ExpertRulesService.GetAllRules())
-                            {
+                    <div class="table-responsive">
+                        <table class="modern-table">
+                            <thead>
                                 <tr>
-                                    <td><strong>@rule.ThreatType</strong></td>
-                                    <td>@rule.Condition</td>
-                                    <td>@rule.ActionRecommendation</td>
-                                    <td>
-                                        <span class="badge @(rule.Priority == "Критичний" ? "bg-danger" : "bg-warning text-dark")">
-                                            @rule.Priority
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-danger py-0" @onclick="() => ExpertRulesService.DeleteRule(rule.Id)">Видалити</button>
-                                    </td>
+                                    <th>Загроза</th>
+                                    <th>Умова</th>
+                                    <th>Рекомендація</th>
+                                    <th>Пріоритет</th>
+                                    <th>Дія</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach (var rule in ExpertRulesService.GetAllRules())
+                                {
+                                    <tr>
+                                        <td><strong>@rule.ThreatType</strong></td>
+                                        <td>@rule.Condition</td>
+                                        <td>@rule.ActionRecommendation</td>
+                                        <td>
+                                            <span class="badge-modern @(rule.Priority == "Критичний" ? "badge-danger" : "badge-amber")">
+                                                <i class="bi bi-flag-fill"></i> @rule.Priority
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn-modern btn-danger-modern" @onclick="() => ExpertRulesService.DeleteRule(rule.Id)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 </div>
 
 @code {
@@ -255,21 +370,12 @@
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);
 
-    private void SetEmergency(string emergencyType)
-    {
-        EmergencyService.SetEmergency(emergencyType);
-    }
+    private void SetEmergency(string emergencyType) => EmergencyService.SetEmergency(emergencyType);
 
     private void AddNewVehicle()
     {
-        if (string.IsNullOrWhiteSpace(newVehicle.BrandModel) || string.IsNullOrWhiteSpace(newVehicle.LicensePlate))
-            return;
-
-        if (newVehicle.BodyType == "Рефрижератор")
-        {
-            newVehicle.HasRefrigerator = true;
-        }
-
+        if (string.IsNullOrWhiteSpace(newVehicle.BrandModel) || string.IsNullOrWhiteSpace(newVehicle.LicensePlate)) return;
+        if (newVehicle.BodyType == "Рефрижератор") newVehicle.HasRefrigerator = true;
         FleetService.AddVehicle(newVehicle);
         newVehicle = new();
     }
@@ -284,7 +390,6 @@
     private void AddExpertRule()
     {
         if (string.IsNullOrWhiteSpace(newRule.ThreatType)) return;
-
         ExpertRulesService.AddRule(newRule);
         newRule = new();
     }
@@ -294,6 +399,47 @@
         AuthService.Logout();
         Navigation.NavigateTo("/");
     }
+
+    private string GetInitials(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName)) return "?";
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2 ? $"{parts[0][0]}{parts[1][0]}".ToUpper() : fullName[..Math.Min(2, fullName.Length)].ToUpper();
+    }
+
+    private string GetEmergencyLevel() => EmergencyService.CurrentEmergency switch
+    {
+        "Спокійно" => "0",
+        "Ожеледиця" => "1",
+        "Перекриття мостів" => "2",
+        "Повітряна тривога" => "3",
+        _ => "—"
+    };
+
+    private string GetEmergencyClass() => EmergencyService.CurrentEmergency switch
+    {
+        "Спокійно" => "status-calm",
+        "Ожеледиця" or "Перекриття мостів" => "status-warning",
+        "Повітряна тривога" => "status-danger",
+        _ => "status-calm"
+    };
+
+    private string GetEmergencyIcon() => EmergencyService.CurrentEmergency switch
+    {
+        "Спокійно" => "bi-check-circle-fill",
+        "Ожеледиця" => "bi-snow2",
+        "Перекриття мостів" => "bi-sign-stop-fill",
+        "Повітряна тривога" => "bi-exclamation-triangle-fill",
+        _ => "bi-question-circle"
+    };
+
+    private string GetEmergencyIconColor() => EmergencyService.CurrentEmergency switch
+    {
+        "Спокійно" => "green",
+        "Ожеледиця" or "Перекриття мостів" => "amber",
+        "Повітряна тривога" => "red",
+        _ => "blue"
+    };
 
     public void Dispose()
     {
