@@ -1,15 +1,96 @@
 ﻿@page "/counter"
+@layout TransportIn.Components.Layout.AdminLayout
 @rendermode InteractiveServer
 
-<PageTitle>Counter</PageTitle>
+<div class="admin-layout">
+    <!-- ===== САЙДБАР ===== -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">
+            <h4><i class="bi bi-truck-front-fill"></i> TransportIn</h4>
+            <small>Диспетчерський пульт</small>
+        </div>
+        <nav class="mt-3">
+            <a class="nav-link" href="/admin-dashboard">
+                <i class="bi bi-grid-1x2-fill"></i> Панель адміна
+            </a>
+            <a class="nav-link" href="/manager-dashboard">
+                <i class="bi bi-people-fill"></i> Менеджер
+            </a>
+            <a class="nav-link" href="/driver-dashboard">
+                <i class="bi bi-person-badge-fill"></i> Водій
+            </a>
+            <a class="nav-link active" href="/counter">
+                <i class="bi bi-graph-up-arrow"></i> Аналітика
+            </a>
+        </nav>
+    </aside>
 
-<h1>Counter</h1>
+    <!-- ===== ОСНОВНИЙ КОНТЕНТ ===== -->
+    <main class="admin-main">
+        <!-- Верхня панель -->
+        <div class="top-navbar">
+            <div>
+                <h5 class="mb-0" style="font-weight: 600; color: var(--text-primary);">Системна аналітика</h5>
+                <small style="color: var(--text-secondary);">Моніторинг активності в реальному часі</small>
+            </div>
+            <div class="user-info">
+                <div class="text-end d-none d-sm-block">
+                    <div class="user-name">Системний користувач</div>
+                    <div class="user-role">Перегляд метрик</div>
+                </div>
+                <div class="user-avatar">СК</div>
+            </div>
+        </div>
 
-<p role="status">Current count: @currentCount</p>
+        <div class="content-section">
+            <!-- Головна картка з лічильником -->
+            <div class="stats-row">
+                <div class="stat-card" style="grid-column: 1 / -1; align-items: center; padding: 2rem;">
+                    <div class="stat-icon blue" style="width: 64px; height: 64px; font-size: 2rem; flex-shrink: 0;">
+                        <i class="bi bi-cpu"></i>
+                    </div>
+                    <div class="ms-4 text-center text-sm-start">
+                        <div class="stat-value" style="font-size: 3.5rem; line-height: 1;">@currentCount</div>
+                        <div class="stat-label" style="font-size: 1rem; margin-top: 0.5rem;">Оброблено системних операцій</div>
+                    </div>
+                    <div class="ms-auto">
+                        <button class="btn-modern btn-add" @onclick="IncrementCount" style="height: 52px; padding: 0 2rem; font-size: 1rem;">
+                            <i class="bi bi-plus-lg"></i> Імітувати операцію
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+            <!-- Додаткові декоративні картки для наповненості інтерфейсу -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="bi bi-check-circle"></i></div>
+                    <div>
+                        <div class="stat-value">99.9%</div>
+                        <div class="stat-label">Uptime системи</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon amber"><i class="bi bi-lightning-charge"></i></div>
+                    <div>
+                        <div class="stat-value">12 мс</div>
+                        <div class="stat-label">Час відгуку сервера</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="bi bi-people"></i></div>
+                    <div>
+                        <div class="stat-value">4</div>
+                        <div class="stat-label">Активних користувачів</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
 
 @code {
+    // ВАША ОРИГІНАЛЬНА ЛОГІКА ЗАЛИШАЄТЬСЯ БЕЗ ЗМІН
     private int currentCount = 0;
 
     private void IncrementCount()

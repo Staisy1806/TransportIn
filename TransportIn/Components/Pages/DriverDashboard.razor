@@ -1,4 +1,5 @@
 ﻿@page "/driver-dashboard"
+@layout TransportIn.Components.Layout.AdminLayout
 @rendermode InteractiveServer
 @inject TransportIn.Services.AuthService AuthService
 @inject TransportIn.Services.EmergencyService EmergencyService
@@ -6,96 +7,232 @@
 @implements IDisposable
 @inject NavigationManager Navigation
 
-<div class="container-fluid mt-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>Кабінет Водія: @AuthService.CurrentUser?.FullName</h2>
-        <button class="btn btn-outline-danger btn-sm" @onclick="Logout">Вийти</button>
-    </div>
+<div class="admin-layout">
+    <!-- ===== САЙДБАР ===== -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">
+            <h4><i class="bi bi-truck-front-fill"></i> TransportIn</h4>
+            <small>Диспетчерський пульт</small>
+        </div>
+        <nav class="mt-3">
+            <a class="nav-link" href="/admin-dashboard">
+                <i class="bi bi-grid-1x2-fill"></i> Панель адміна
+            </a>
+            <a class="nav-link" href="/manager-dashboard">
+                <i class="bi bi-people-fill"></i> Менеджер
+            </a>
+            <a class="nav-link active" href="/driver-dashboard">
+                <i class="bi bi-person-badge-fill"></i> Водій
+            </a>
+            <a class="nav-link" href="/counter">
+                <i class="bi bi-graph-up-arrow"></i> Аналітика
+            </a>
+        </nav>
+    </aside>
 
-    <!-- Сповіщення про надзвичайну ситуацію (гібридні загрози) -->
-    <div class="alert @GetAlertClass(EmergencyService.CurrentEmergency) mb-4 shadow-sm">
-        <h4 class="alert-heading">⚠️ Статус у місті: <strong>@EmergencyService.CurrentEmergency</strong></h4>
-        <p class="mb-0">Дотримуйтесь інструкцій логістичного центру та правил безпеки для цього режиму.</p>
-    </div>
+    <!-- ===== ОСНОВНИЙ КОНТЕНТ ===== -->
+    <main class="admin-main">
+        <!-- Верхня панель -->
+        <div class="top-navbar">
+            <div>
+                <h5 class="mb-0" style="font-weight: 600; color: var(--text-primary);">Кабінет водія</h5>
+                <small style="color: var(--text-secondary);">@AuthService.CurrentUser?.FullName</small>
+            </div>
+            <div class="user-info">
+                <button class="btn-logout" @onclick="Logout">
+                    <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Вийти</span>
+                </button>
+            </div>
+        </div>
 
-    <div class="row">
-        <!-- Ліва колонка: Поточні завдання водія -->
-        <div class="col-md-7">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">🚚 Мої призначені замовлення</h5>
+        <div class="content-section">
+            <!-- Сповіщення про загрози -->
+            <div class="emergency-panel" style="border-left-color: @GetEmergencyColor()">
+                <div class="emergency-header" style="background: @GetEmergencyHeaderBg()">
+                    <h5>
+                        <i class="bi @GetEmergencyIcon()" style="color: @GetEmergencyColor()"></i>
+                        Статус безпеки: @EmergencyService.CurrentEmergency
+                    </h5>
+                    <span class="emergency-status @GetEmergencyClass()">
+                        <i class="bi @GetEmergencyStatusIcon()"></i>
+                        @EmergencyService.CurrentEmergency
+                    </span>
                 </div>
-                <div class="card-body">
-                    @{
-                        // Знаходимо замовлення, призначені на цей транспорт (або виводимо всі активні для тесту)
-                        var assignedOrders = OrderService.GetAllOrders();
-                    }
+                <div class="emergency-body">
+                    <p class="mb-0" style="color: var(--text-secondary);">
+                        Дотримуйтесь інструкцій логістичного центру та правил безпеки для цього режиму.
+                    </p>
+                </div>
+            </div>
 
-                    @if (!assignedOrders.Any())
-                    {
-                        <p class="text-muted">Наразі немає активних призначень.</p>
-                    }
-                    else
-                    {
-                        @foreach (var order in assignedOrders)
-                        {
-                            <div class="card mb-3 border-secondary">
-                                <div class="card-body">
-                                    <h5 class="card-title">Замовлення №@order.Id: @order.CargoName</h5>
-                                    <p class="mb-1"><strong>Замовник:</strong> @order.CustomerCompany (@order.CustomerName, тел: @order.CustomerPhone)</p>
-                                    <p class="mb-1"><strong>Параметри:</strong> Вага: @order.WeightTons т | Об'єм: @order.VolumeM3 м³</p>
+            <div class="row g-4">
+                <!-- Ліва колонка: Замовлення -->
+                <div class="col-lg-7">
+                    <div class="modern-card">
+                        <div class="card-header-custom">
+                            <h5>
+                                <span class="header-icon blue"><i class="bi bi-truck"></i></span>
+                                Мої призначені замовлення
+                            </h5>
+                            <span class="badge-count">@OrderService.GetAllOrders().Count активних</span>
+                        </div>
+                        <div class="card-body-custom">
+                            @{
+                                var assignedOrders = OrderService.GetAllOrders();
+                            }
 
-                                    <p class="mb-1 text-primary"><strong>Звідки:</strong> @string.Join(" ➔ ", order.LoadingPoints)</p>
-                                    <p class="mb-2 text-success"><strong>Куди:</strong> @string.Join(" ➔ ", order.DeliveryPoints)</p>
+                            @if (!assignedOrders.Any())
+                            {
+                                <div class="text-center py-5" style="color: var(--text-secondary);">
+                                    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                                    <p class="mt-3 mb-0">Наразі немає активних призначень</p>
+                                </div>
+                            }
+                            else
+                            {
+                                @foreach (var order in assignedOrders)
+                                {
+                                    <div class="modern-card" style="margin-bottom: 1rem; border: 1px solid var(--border-color);">
+                                        <div class="card-body-custom">
+                                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                                <div>
+                                                    <h6 class="mb-1" style="color: var(--text-primary); font-weight: 700;">
+                                                        Замовлення №@order.Id: @order.CargoName
+                                                    </h6>
+                                                    <p class="mb-1" style="color: var(--text-secondary); font-size: 0.85rem;">
+                                                        <i class="bi bi-building"></i> @order.CustomerCompany (@order.CustomerName)
+                                                    </p>
+                                                </div>
+                                                <span class="badge-modern badge-primary">@order.Status</span>
+                                            </div>
 
-                                    <p class="mb-2"><strong>Статус виконання:</strong> <span class="badge bg-info text-dark">@order.Status</span></p>
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-md-6">
+                                                    <div style="background: var(--bg-input); padding: 0.75rem; border-radius: 8px;">
+                                                        <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.25rem;">
+                                                            <i class="bi bi-geo-alt-fill" style="color: var(--primary-blue);"></i> Звідки
+                                                        </div>
+                                                        <div style="color: var(--text-primary); font-size: 0.9rem;">@string.Join(" → ", order.LoadingPoints)</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div style="background: var(--bg-input); padding: 0.75rem; border-radius: 8px;">
+                                                        <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.25rem;">
+                                                            <i class="bi bi-flag-fill" style="color: var(--success-green);"></i> Куди
+                                                        </div>
+                                                        <div style="color: var(--text-primary); font-size: 0.9rem;">@string.Join(" → ", order.DeliveryPoints)</div>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                    <!-- Кнопки зміни статусів згідно з ТЗ -->
-                                    <div class="btn-group-sm mt-2" role="group">
-                                        <button class="btn btn-outline-secondary" @onclick='() => UpdateOrderStatus(order, "Прибув на завантаження")'>Прибув на завантаження</button>
-                                        <button class="btn btn-outline-primary" @onclick='() => UpdateOrderStatus(order, "В дорозі / Виконання")'>В дорозі</button>
-                                        <button class="btn btn-outline-success" @onclick='() => UpdateOrderStatus(order, "Доставлено / Завершено")'>Доставлено</button>
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6">
+                                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Вага</div>
+                                                    <div style="font-weight: 600; color: var(--text-primary);">@order.WeightTons т</div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Об'єм</div>
+                                                    <div style="font-weight: 600; color: var(--text-primary);">@order.VolumeM3 м³</div>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex gap-2 flex-wrap">
+                                                <button class="btn-modern"
+                                                        style="background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border-color);"
+                                                        @onclick='() => UpdateOrderStatus(order, "Прибув на завантаження")'>
+                                                    <i class="bi bi-geo-alt"></i> Прибув на завантаження
+                                                </button>
+                                                <button class="btn-modern btn-add"
+                                                        @onclick='() => UpdateOrderStatus(order, "В дорозі / Виконання")'>
+                                                    <i class="bi bi-truck"></i> В дорозі
+                                                </button>
+                                                <button class="btn-modern"
+                                                        style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);"
+                                                        @onclick='() => UpdateOrderStatus(order, "Доставлено / Завершено")'>
+                                                    <i class="bi bi-check-circle"></i> Доставлено
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Права колонка: Повідомлення про проблеми -->
+                <div class="col-lg-5">
+                    <div class="modern-card" style="border: 1px solid rgba(239, 68, 68, 0.3);">
+                        <div class="card-header-custom">
+                            <h5>
+                                <span class="header-icon" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                </span>
+                                Повідомити про проблему
+                            </h5>
+                        </div>
+                        <div class="card-body-custom">
+                            <div class="mb-3">
+                                <label class="form-label" style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Тип проблеми</label>
+                                <select class="form-select" style="background: var(--bg-input); border-color: var(--border-color); color: var(--text-primary);" @bind="problemType">
+                                    <option value="ДТП / Перекриття дороги (Адмін)">ДТП / Проблема на дорозі</option>
+                                    <option value="Клієнт не виходить на зв'язок (Менеджер)">Проблема зі стороною клієнта</option>
+                                    <option value="Технічна несправність авто">Технічна поломка автомобіля</option>
+                                    <option value="Погіршення самопочуття">Проблеми зі здоров'ям</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Опис проблеми</label>
+                                <textarea class="form-control" rows="4"
+                                          style="background: var(--bg-input); border-color: var(--border-color); color: var(--text-primary);"
+                                          @bind="problemDescription"
+                                          placeholder="Опишіть ситуацію детально..."></textarea>
+                            </div>
+                            <button class="btn-modern w-100"
+                                    style="background: var(--danger-red); color: white;"
+                                    @onclick="SendProblemReport">
+                                <i class="bi bi-send"></i> Надіслати диспетчеру
+                            </button>
+
+                            @if (reportSent)
+                            {
+                                <div class="alert mt-3 mb-0"
+                                     style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; border-radius: 8px;">
+                                    <i class="bi bi-check-circle-fill"></i> Повідомлення успішно надіслано!
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Додаткова картка: Контактна інформація -->
+                    <div class="modern-card mt-4">
+                        <div class="card-header-custom">
+                            <h5>
+                                <span class="header-icon green"><i class="bi bi-telephone"></i></span>
+                                Контакти диспетчера
+                            </h5>
+                        </div>
+                        <div class="card-body-custom">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-telephone-fill" style="color: var(--success-green); font-size: 1.25rem; margin-right: 0.75rem;"></i>
+                                <div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Гаряча лінія</div>
+                                    <div style="font-weight: 600; color: var(--text-primary);">+380 (XX) XXX-XX-XX</div>
                                 </div>
                             </div>
-                        }
-                    }
-                </div>
-            </div>
-        </div>
-
-        <!-- Права колонка: Надсилання повідомлень про проблеми (аварії, клієнт не на зв'язку) -->
-        <div class="col-md-5">
-            <div class="card shadow-sm border-danger">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">🚨 Повідомити про проблему</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label">Тип проблеми</label>
-                        <select class="form-select" @bind="problemType">
-                            <option value="ДТП / Перекриття дороги (Адмін)">ДТП / Проблема на дорозі</option>
-                            <option value="Клієнт не виходить на зв'язок (Менеджер)">Проблема зі стороною клієнта</option>
-                            <option value="Технічна несправність авто">Технічна поломка автомобіля</option>
-                            <option value="Погіршення самопочуття">Проблеми зі здоров'ям</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Опис проблеми</label>
-                        <textarea class="form-control" rows="3" @bind="problemDescription" placeholder="Опишіть ситуацію..."></textarea>
-                    </div>
-                    <button class="btn btn-danger w-100" @onclick="SendProblemReport">Надіслати диспетчеру</button>
-
-                    @if (reportSent)
-                    {
-                        <div class="alert alert-success mt-3 mb-0 py-2">
-                            Повідомлення успішно надіслано відповідальній стороні!
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-envelope-fill" style="color: var(--primary-blue); font-size: 1.25rem; margin-right: 0.75rem;"></i>
+                                <div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Email</div>
+                                    <div style="font-weight: 600; color: var(--text-primary);">dispatcher@transportin.com</div>
+                                </div>
+                            </div>
                         </div>
-                    }
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 </div>
 
 @code {
@@ -118,6 +255,45 @@
         "Ожеледиця" => "alert-warning",
         "Потоп / Буря" => "alert-info",
         _ => "alert-success"
+    };
+
+    private string GetEmergencyColor() => EmergencyService.CurrentEmergency switch
+    {
+        "Повітряна тривога" => "#ef4444",
+        "Ожеледиця" => "#f59e0b",
+        "Перекриття мостів" => "#f59e0b",
+        _ => "#10b981"
+    };
+
+    private string GetEmergencyHeaderBg() => EmergencyService.CurrentEmergency switch
+    {
+        "Повітряна тривога" => "rgba(239, 68, 68, 0.1)",
+        "Ожеледиця" => "rgba(245, 158, 11, 0.1)",
+        "Перекриття мостів" => "rgba(245, 158, 11, 0.1)",
+        _ => "rgba(16, 185, 129, 0.1)"
+    };
+
+    private string GetEmergencyIcon() => EmergencyService.CurrentEmergency switch
+    {
+        "Повітряна тривога" => "bi-exclamation-triangle-fill",
+        "Ожеледиця" => "bi-snow2",
+        "Перекриття мостів" => "bi-sign-stop-fill",
+        _ => "bi-check-circle-fill"
+    };
+
+    private string GetEmergencyClass() => EmergencyService.CurrentEmergency switch
+    {
+        "Повітряна тривога" => "status-danger",
+        "Ожеледиця" or "Перекриття мостів" => "status-warning",
+        _ => "status-calm"
+    };
+
+    private string GetEmergencyStatusIcon() => EmergencyService.CurrentEmergency switch
+    {
+        "Повітряна тривога" => "bi-exclamation-triangle-fill",
+        "Ожеледиця" => "bi-snow2",
+        "Перекриття мостів" => "bi-sign-stop-fill",
+        _ => "bi-check-circle-fill"
     };
 
     private void UpdateOrderStatus(TransportIn.Models.Order order, string newStatus)
