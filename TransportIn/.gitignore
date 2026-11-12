@@ -6,12 +6,3 @@ obj/
 *.suo
 *.userosscache
 *.sln.docstates
-# IDE
-.idea/
-
-# Temporary files
-*.tmp
-*.log
-
-# Local configuration and secrets
-appsettings.Development.json
