@@ -3,8 +3,8 @@
 @inject TransportIn.Services.AuthService AuthService
 @inject TransportIn.Services.EmergencyService EmergencyService
 @inject TransportIn.Services.OrderService OrderService
-@implements IDisposable
 @inject NavigationManager Navigation
+@implements IDisposable
 
 <div class="container-fluid mt-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -12,49 +12,81 @@
         <button class="btn btn-outline-danger btn-sm" @onclick="Logout">Вийти</button>
     </div>
 
-    <!-- Сповіщення про надзвичайну ситуацію (гібридні загрози) -->
     <div class="alert @GetAlertClass(EmergencyService.CurrentEmergency) mb-4 shadow-sm">
-        <h4 class="alert-heading">⚠️ Статус у місті: <strong>@EmergencyService.CurrentEmergency</strong></h4>
-        <p class="mb-0">Дотримуйтесь інструкцій логістичного центру та правил безпеки для цього режиму.</p>
+        <h4 class="alert-heading">
+            ⚠️ Статус у місті: <strong>@EmergencyService.CurrentEmergency</strong>
+        </h4>
+        <p class="mb-0">
+            Дотримуйтесь інструкцій логістичного центру та правил безпеки для цього режиму.
+        </p>
     </div>
 
     <div class="row">
-        <!-- Ліва колонка: Поточні завдання водія -->
         <div class="col-md-7">
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">🚚 Мої призначені замовлення</h5>
                 </div>
-                <div class="card-body">
-                    @{
-                        // Знаходимо замовлення, призначені на цей транспорт (або виводимо всі активні для тесту)
-                        var assignedOrders = OrderService.GetAllOrders();
-                    }
 
-                    @if (!assignedOrders.Any())
+                <div class="card-body">
+                    @if (orders.Count == 0)
                     {
                         <p class="text-muted">Наразі немає активних призначень.</p>
                     }
                     else
                     {
-                        @foreach (var order in assignedOrders)
+                        @foreach (var order in orders)
                         {
                             <div class="card mb-3 border-secondary">
                                 <div class="card-body">
-                                    <h5 class="card-title">Замовлення №@order.Id: @order.CargoName</h5>
-                                    <p class="mb-1"><strong>Замовник:</strong> @order.CustomerCompany (@order.CustomerName, тел: @order.CustomerPhone)</p>
-                                    <p class="mb-1"><strong>Параметри:</strong> Вага: @order.WeightTons т | Об'єм: @order.VolumeM3 м³</p>
+                                    <h5 class="card-title">
+                                        Замовлення №@order.Id: @order.CargoName
+                                    </h5>
 
-                                    <p class="mb-1 text-primary"><strong>Звідки:</strong> @string.Join(" ➔ ", order.LoadingPoints)</p>
-                                    <p class="mb-2 text-success"><strong>Куди:</strong> @string.Join(" ➔ ", order.DeliveryPoints)</p>
+                                    <p class="mb-1">
+                                        <strong>Замовник:</strong>
+                                        @order.CustomerCompany (@order.CustomerName,
+                                        тел: @order.CustomerPhone)
+                                    </p>
 
-                                    <p class="mb-2"><strong>Статус виконання:</strong> <span class="badge bg-info text-dark">@order.Status</span></p>
+                                    <p class="mb-1">
+                                        <strong>Параметри:</strong>
+                                        Вага: @order.WeightTons т |
+                                        Об'єм: @order.VolumeM3 м³
+                                    </p>
 
-                                    <!-- Кнопки зміни статусів згідно з ТЗ -->
+                                    <p class="mb-1 text-primary">
+                                        <strong>Звідки:</strong>
+                                        @string.Join(" ➔ ", order.LoadingPoints)
+                                    </p>
+
+                                    <p class="mb-2 text-success">
+                                        <strong>Куди:</strong>
+                                        @string.Join(" ➔ ", order.DeliveryPoints)
+                                    </p>
+
+                                    <p class="mb-2">
+                                        <strong>Статус виконання:</strong>
+                                        <span class="badge bg-info text-dark">
+                                            @order.Status
+                                        </span>
+                                    </p>
+
                                     <div class="btn-group-sm mt-2" role="group">
-                                        <button class="btn btn-outline-secondary" @onclick='() => UpdateOrderStatus(order, "Прибув на завантаження")'>Прибув на завантаження</button>
-                                        <button class="btn btn-outline-primary" @onclick='() => UpdateOrderStatus(order, "В дорозі / Виконання")'>В дорозі</button>
-                                        <button class="btn btn-outline-success" @onclick='() => UpdateOrderStatus(order, "Доставлено / Завершено")'>Доставлено</button>
+                                        <button class="btn btn-outline-secondary"
+                                                @onclick='() => UpdateOrderStatus(order, "Прибув на завантаження")'>
+                                            Прибув на завантаження
+                                        </button>
+
+                                        <button class="btn btn-outline-primary"
+                                                @onclick='() => UpdateOrderStatus(order, "В дорозі / Виконання")'>
+                                            В дорозі
+                                        </button>
+
+                                        <button class="btn btn-outline-success"
+                                                @onclick='() => UpdateOrderStatus(order, "Доставлено / Завершено")'>
+                                            Доставлено
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -64,27 +96,44 @@
             </div>
         </div>
 
-        <!-- Права колонка: Надсилання повідомлень про проблеми (аварії, клієнт не на зв'язку) -->
         <div class="col-md-5">
             <div class="card shadow-sm border-danger">
                 <div class="card-header bg-danger text-white">
                     <h5 class="mb-0">🚨 Повідомити про проблему</h5>
                 </div>
+
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">Тип проблеми</label>
                         <select class="form-select" @bind="problemType">
-                            <option value="ДТП / Перекриття дороги (Адмін)">ДТП / Проблема на дорозі</option>
-                            <option value="Клієнт не виходить на зв'язок (Менеджер)">Проблема зі стороною клієнта</option>
-                            <option value="Технічна несправність авто">Технічна поломка автомобіля</option>
-                            <option value="Погіршення самопочуття">Проблеми зі здоров'ям</option>
+                            <option value="ДТП / Перекриття дороги (Адмін)">
+                                ДТП / Проблема на дорозі
+                            </option>
+                            <option value="Клієнт не виходить на зв'язок (Менеджер)">
+                                Проблема зі стороною клієнта
+                            </option>
+                            <option value="Технічна несправність авто">
+                                Технічна поломка автомобіля
+                            </option>
+                            <option value="Погіршення самопочуття">
+                                Проблеми зі здоров'ям
+                            </option>
                         </select>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">Опис проблеми</label>
-                        <textarea class="form-control" rows="3" @bind="problemDescription" placeholder="Опишіть ситуацію..."></textarea>
+                        <textarea class="form-control"
+                                  rows="3"
+                                  @bind="problemDescription"
+                                  placeholder="Опишіть ситуацію...">
+                        </textarea>
                     </div>
-                    <button class="btn btn-danger w-100" @onclick="SendProblemReport">Надіслати диспетчеру</button>
+
+                    <button class="btn btn-danger w-100"
+                            @onclick="SendProblemReport">
+                        Надіслати диспетчеру
+                    </button>
 
                     @if (reportSent)
                     {
@@ -99,18 +148,23 @@
 </div>
 
 @code {
+    private List<TransportIn.Models.Order> orders = new();
+
     private string problemType = "ДТП / Перекриття дороги (Адмін)";
     private string problemDescription = "";
     private bool reportSent = false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         EmergencyService.OnChange += OnEmergencyChanged;
-        OrderService.OnChange += OnOrderChanged;
+
+        orders = await OrderService.GetAllOrdersAsync();
     }
 
-    private void OnEmergencyChanged() => InvokeAsync(StateHasChanged);
-    private void OnOrderChanged() => InvokeAsync(StateHasChanged);
+    private void OnEmergencyChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
 
     private string GetAlertClass(string status) => status switch
     {
@@ -120,15 +174,21 @@
         _ => "alert-success"
     };
 
-    private void UpdateOrderStatus(TransportIn.Models.Order order, string newStatus)
+    private async Task UpdateOrderStatus(
+        TransportIn.Models.Order order,
+        string newStatus)
     {
         order.Status = newStatus;
-        // Оновлюємо стан у сервісі
+
+        await OrderService.UpdateOrderAsync(order);
+
+        orders = await OrderService.GetAllOrdersAsync();
     }
 
     private void SendProblemReport()
     {
-        if (string.IsNullOrWhiteSpace(problemDescription)) return;
+        if (string.IsNullOrWhiteSpace(problemDescription))
+            return;
 
         reportSent = true;
         problemDescription = "";
@@ -143,6 +203,5 @@
     public void Dispose()
     {
         EmergencyService.OnChange -= OnEmergencyChanged;
-        OrderService.OnChange -= OnOrderChanged;
     }
 }

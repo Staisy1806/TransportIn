@@ -1,12 +1,15 @@
 ﻿@page "/admin-dashboard"
 @rendermode InteractiveServer
+
 @inject TransportIn.Services.AuthService AuthService
 @inject TransportIn.Services.EmergencyService EmergencyService
-@inject TransportIn.Services.FleetService FleetService
+@inject TransportIn.Services.IVehicleService VehicleService
 @inject TransportIn.Services.ExpertRulesService ExpertRulesService
 @inject TransportIn.Services.EmployeeService EmployeeService
-@implements IDisposable
+@using TransportIn.Services
 @inject NavigationManager Navigation
+
+@implements IDisposable
 
 <div class="container-fluid mt-3">
     <!-- Шапка панелі адміністратора -->
@@ -24,14 +27,32 @@
             <div class="row align-items-center">
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Поточна глобальна загроза:</label>
-                    <span class="badge bg-warning text-dark fs-6 ms-2">@EmergencyService.CurrentEmergency</span>
+                    <span class="badge bg-warning text-dark fs-6 ms-2">
+                        @EmergencyService.CurrentEmergency
+                    </span>
                 </div>
+
                 <div class="col-md-8">
                     <div class="btn-group flex-wrap" role="group">
-                        <button class="btn btn-outline-success btn-sm m-1" @onclick='() => SetEmergency("Спокійно")'>Зняти тривогу</button>
-                        <button class="btn btn-outline-danger btn-sm m-1" @onclick='() => SetEmergency("Повітряна тривога")'>Повітряна тривога</button>
-                        <button class="btn btn-outline-warning btn-sm m-1" @onclick='() => SetEmergency("Ожеледиця")'>Ожеледиця</button>
-                        <button class="btn btn-outline-secondary btn-sm m-1" @onclick='() => SetEmergency("Перекриття мостів")'>Закриття мостів</button>
+                        <button class="btn btn-outline-success btn-sm m-1"
+                                @onclick='() => SetEmergency("Спокійно")'>
+                            Зняти тривогу
+                        </button>
+
+                        <button class="btn btn-outline-danger btn-sm m-1"
+                                @onclick='() => SetEmergency("Повітряна тривога")'>
+                            Повітряна тривога
+                        </button>
+
+                        <button class="btn btn-outline-warning btn-sm m-1"
+                                @onclick='() => SetEmergency("Ожеледиця")'>
+                            Ожеледиця
+                        </button>
+
+                        <button class="btn btn-outline-secondary btn-sm m-1"
+                                @onclick='() => SetEmergency("Перекриття мостів")'>
+                            Закриття мостів
+                        </button>
                     </div>
                 </div>
             </div>
@@ -39,39 +60,68 @@
     </div>
 
     <div class="row">
-        <!-- Секція 1: Управління автопарком (Транспортні засоби) -->
+
+        <!-- Секція 1: Управління автопарком -->
         <div class="col-md-12 mb-4">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">🚛 Управління автопарком підприємства</h5>
                 </div>
+
                 <div class="card-body">
+
                     <!-- Форма додавання машини -->
                     <div class="row g-2 mb-3 bg-light p-2 rounded">
                         <div class="col-md-2">
-                            <input type="text" class="form-control form-control-sm" @bind="newVehicle.BrandModel" placeholder="Марка, модель" />
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   @bind="newVehicle.BrandModel"
+                                   placeholder="Марка, модель" />
                         </div>
+
                         <div class="col-md-2">
-                            <input type="text" class="form-control form-control-sm" @bind="newVehicle.LicensePlate" placeholder="Держномер (AA 1234 ВР)" />
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   @bind="newVehicle.LicensePlate"
+                                   placeholder="Держномер (AA 1234 ВР)" />
                         </div>
+
                         <div class="col-md-2">
-                            <input type="text" class="form-control form-control-sm" @bind="newVehicle.VinCode" placeholder="VIN-код (17 символів)" />
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   @bind="newVehicle.VinCode"
+                                   placeholder="VIN-код (17 символів)" />
                         </div>
+
                         <div class="col-md-2">
-                            <select class="form-select form-select-sm" @bind="newVehicle.BodyType">
+                            <select class="form-select form-select-sm"
+                                    @bind="newVehicle.BodyType">
                                 <option value="Тент">Тент</option>
                                 <option value="Рефрижератор">Рефрижератор</option>
                                 <option value="Цільнометалічний фургон">Фургон</option>
                             </select>
                         </div>
+
                         <div class="col-md-1">
-                            <input type="number" step="0.5" class="form-control form-control-sm" @bind="newVehicle.CapacityTons" placeholder="Тонн" />
+                            <input type="number"
+                                   step="0.5"
+                                   class="form-control form-control-sm"
+                                   @bind="newVehicle.CapacityTons"
+                                   placeholder="Тонн" />
                         </div>
+
                         <div class="col-md-1">
-                            <input type="number" class="form-control form-control-sm" @bind="newVehicle.VolumeM3" placeholder="м³" />
+                            <input type="number"
+                                   class="form-control form-control-sm"
+                                   @bind="newVehicle.VolumeM3"
+                                   placeholder="м³" />
                         </div>
+
                         <div class="col-md-2">
-                            <button class="btn btn-sm btn-success w-100" @onclick="AddNewVehicle">+ Додати авто</button>
+                            <button class="btn btn-sm btn-success w-100"
+                                    @onclick="AddNewVehicle">
+                                + Додати авто
+                            </button>
                         </div>
                     </div>
 
@@ -90,8 +140,9 @@
                                 <th>Дії</th>
                             </tr>
                         </thead>
+
                         <tbody>
-                            @foreach (var veh in FleetService.GetAllVehicles())
+                            @foreach (var veh in vehicles)
                             {
                                 <tr>
                                     <td>@veh.Id</td>
@@ -103,7 +154,19 @@
                                     <td>@veh.VolumeM3 м³</td>
                                     <td>@(veh.HasRefrigerator ? "✅" : "❌")</td>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-danger py-0" @onclick="() => FleetService.DeleteVehicle(veh.Id)">Видалити</button>
+                                        <button class="btn btn-sm btn-outline-danger py-0"
+                                                @onclick="() => DeleteVehicle(veh.Id)">
+                                            Видалити
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+
+                            @if (vehicles.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted">
+                                        Автомобілі відсутні
                                     </td>
                                 </tr>
                             }
@@ -119,27 +182,46 @@
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">👥 Управління працівниками та водіями</h5>
                 </div>
+
                 <div class="card-body">
+
                     <!-- Форма додавання працівника -->
                     <div class="row g-2 mb-3 bg-light p-2 rounded">
                         <div class="col-md-3">
-                            <input type="text" class="form-control form-control-sm" @bind="newEmp.FullName" placeholder="ПІБ працівника" />
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   @bind="newEmp.FullName"
+                                   placeholder="ПІБ працівника" />
                         </div>
+
                         <div class="col-md-2">
-                            <select class="form-select form-select-sm" @bind="newEmp.Role">
+                            <select class="form-select form-select-sm"
+                                    @bind="newEmp.Role">
                                 <option value="Водій">Водій</option>
                                 <option value="Менеджер">Менеджер</option>
                                 <option value="Адміністратор">Адміністратор</option>
                             </select>
                         </div>
+
                         <div class="col-md-2">
-                            <input type="text" class="form-control form-control-sm" @bind="newEmp.Phone" placeholder="Телефон" />
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   @bind="newEmp.Phone"
+                                   placeholder="Телефон" />
                         </div>
+
                         <div class="col-md-2">
-                            <input type="text" class="form-control form-control-sm" @bind="newEmp.LicenseCategory" placeholder="Категорії (C, CE)" />
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   @bind="newEmp.LicenseCategory"
+                                   placeholder="Категорії (C, CE)" />
                         </div>
+
                         <div class="col-md-3">
-                            <button class="btn btn-sm btn-success w-100" @onclick="AddNewEmployee">+ Додати працівника</button>
+                            <button class="btn btn-sm btn-success w-100"
+                                    @onclick="AddNewEmployee">
+                                + Додати працівника
+                            </button>
                         </div>
                     </div>
 
@@ -157,13 +239,16 @@
                                 <th>Дії</th>
                             </tr>
                         </thead>
+
                         <tbody>
-                            @foreach (var emp in EmployeeService.GetAllEmployees())
+                            @foreach (var emp in employees)
                             {
                                 <tr>
                                     <td>@emp.Id</td>
                                     <td><strong>@emp.FullName</strong></td>
-                                    <td><span class="badge bg-secondary">@emp.Role</span></td>
+                                    <td>
+                                        <span class="badge bg-secondary">@emp.Role</span>
+                                    </td>
                                     <td>@emp.Phone</td>
                                     <td><code>@emp.LicenseCategory</code></td>
                                     <td>@emp.MedicalCertExpiry</td>
@@ -173,7 +258,10 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-danger py-0" @onclick="() => EmployeeService.DeleteEmployee(emp.Id)">Видалити</button>
+                                        <button class="btn btn-sm btn-outline-danger py-0"
+                                                @onclick="() => EmployeeService.DeleteEmployee(emp.Id)">
+                                            Видалити
+                                        </button>
                                     </td>
                                 </tr>
                             }
@@ -189,19 +277,35 @@
                 <div class="card-header bg-dark text-white">
                     <h5 class="mb-0">🧠 База експертних знань та правил реагування на загрози</h5>
                 </div>
+
                 <div class="card-body">
                     <div class="row g-2 mb-3 bg-light p-2 rounded">
                         <div class="col-md-3">
-                            <input type="text" class="form-control form-control-sm" @bind="newRule.ThreatType" placeholder="Тип загрози" />
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   @bind="newRule.ThreatType"
+                                   placeholder="Тип загрози" />
                         </div>
+
                         <div class="col-md-3">
-                            <input type="text" class="form-control form-control-sm" @bind="newRule.Condition" placeholder="Умова застосування" />
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   @bind="newRule.Condition"
+                                   placeholder="Умова застосування" />
                         </div>
+
                         <div class="col-md-4">
-                            <input type="text" class="form-control form-control-sm" @bind="newRule.ActionRecommendation" placeholder="Рекомендована дія системи" />
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   @bind="newRule.ActionRecommendation"
+                                   placeholder="Рекомендована дія системи" />
                         </div>
+
                         <div class="col-md-2">
-                            <button class="btn btn-sm btn-success w-100" @onclick="AddExpertRule">+ Додати правило</button>
+                            <button class="btn btn-sm btn-success w-100"
+                                    @onclick="AddExpertRule">
+                                + Додати правило
+                            </button>
                         </div>
                     </div>
 
@@ -215,8 +319,9 @@
                                 <th>Дія</th>
                             </tr>
                         </thead>
+
                         <tbody>
-                            @foreach (var rule in ExpertRulesService.GetAllRules())
+                            @foreach (var rule in rules)
                             {
                                 <tr>
                                     <td><strong>@rule.ThreatType</strong></td>
@@ -228,7 +333,10 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-danger py-0" @onclick="() => ExpertRulesService.DeleteRule(rule.Id)">Видалити</button>
+                                        <button class="btn btn-sm btn-outline-danger py-0"
+                                                @onclick="() => ExpertRulesService.DeleteRule(rule.Id)">
+                                            Видалити
+                                        </button>
                                     </td>
                                 </tr>
                             }
@@ -237,55 +345,93 @@
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
 @code {
     private TransportIn.Models.Vehicle newVehicle = new();
+
+    private List<TransportIn.Models.Vehicle> vehicles = new();
+
     private TransportIn.Services.Employee newEmp = new();
+
     private TransportIn.Services.ExpertRule newRule = new();
+
+    private List<Employee> employees = new();
+
+    private List<ExpertRule> rules = new();
 
     protected override void OnInitialized()
     {
         EmergencyService.OnChange += OnStateChanged;
-        FleetService.OnChange += OnStateChanged;
         ExpertRulesService.OnChange += OnStateChanged;
         EmployeeService.OnChange += OnStateChanged;
     }
 
-    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+    protected override async Task OnInitializedAsync()
+    {
+        vehicles = await VehicleService.GetAllVehiclesAsync();
+
+        employees = EmployeeService.GetAllEmployees();
+
+        rules = ExpertRulesService.GetAllRules();
+    }
+
+    private void OnStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
 
     private void SetEmergency(string emergencyType)
     {
         EmergencyService.SetEmergency(emergencyType);
     }
 
-    private void AddNewVehicle()
+    private async Task AddNewVehicle()
     {
-        if (string.IsNullOrWhiteSpace(newVehicle.BrandModel) || string.IsNullOrWhiteSpace(newVehicle.LicensePlate))
+        if (string.IsNullOrWhiteSpace(newVehicle.BrandModel) ||
+            string.IsNullOrWhiteSpace(newVehicle.LicensePlate))
+        {
             return;
+        }
 
         if (newVehicle.BodyType == "Рефрижератор")
         {
             newVehicle.HasRefrigerator = true;
         }
 
-        FleetService.AddVehicle(newVehicle);
+        await VehicleService.AddVehicleAsync(newVehicle);
+
+        vehicles = await VehicleService.GetAllVehiclesAsync();
+
         newVehicle = new();
+    }
+
+    private async Task DeleteVehicle(int id)
+    {
+        await VehicleService.DeleteVehicleAsync(id);
+
+        vehicles = await VehicleService.GetAllVehiclesAsync();
     }
 
     private void AddNewEmployee()
     {
-        if (string.IsNullOrWhiteSpace(newEmp.FullName)) return;
+        if (string.IsNullOrWhiteSpace(newEmp.FullName))
+            return;
+
         EmployeeService.AddEmployee(newEmp);
+
         newEmp = new();
     }
 
     private void AddExpertRule()
     {
-        if (string.IsNullOrWhiteSpace(newRule.ThreatType)) return;
+        if (string.IsNullOrWhiteSpace(newRule.ThreatType))
+            return;
 
         ExpertRulesService.AddRule(newRule);
+
         newRule = new();
     }
 
@@ -298,7 +444,6 @@
     public void Dispose()
     {
         EmergencyService.OnChange -= OnStateChanged;
-        FleetService.OnChange -= OnStateChanged;
         ExpertRulesService.OnChange -= OnStateChanged;
         EmployeeService.OnChange -= OnStateChanged;
     }

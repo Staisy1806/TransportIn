@@ -1,46 +1,81 @@
-﻿namespace TransportIn.Services
+﻿
+using Microsoft.EntityFrameworkCore;
+using TransportIn.Data;
+using TransportIn.Models;
+
+namespace TransportIn.Services
 {
     public class Employee
     {
-        public int Id { get; set; }
-        public string FullName { get; set; } = "";
-        public string Role { get; set; } = "Водій"; // Адміністратор, Менеджер, Водій
-        public string Phone { get; set; } = "";
-        public string LicenseCategory { get; set; } = "C, CE"; // Категорії водія
-        public string MedicalCertExpiry { get; set; } = "01.01.2027"; // Термін дії медкнижки
-        public bool IsActive { get; set; } = true;
-    }
+            public int Id { get; set; }
 
-    public class EmployeeService
+            public string FullName { get; set; } = "";
+
+            public string Address { get; set; } = "";
+
+            public string Phone { get; set; } = "";
+
+            public string Email { get; set; } = "";
+
+            public string PhotoPath { get; set; } = "";
+
+            public int RoleId { get; set; }
+
+            public Role? RoleInfo { get; set; }
+
+            // Оставляем для совместимости с существующей страницей администратора
+            public string Role { get; set; } = "Водій";
+
+            public string LicenseCategory { get; set; } = "C, CE";
+
+            public string MedicalCertExpiry { get; set; } = "01.01.2027";
+
+            public bool IsActive { get; set; } = true;
+        }
+
+        public class EmployeeService
     {
-        private List<Employee> employees = new()
+        private readonly AppDbContext _context;
+
+        public EmployeeService(AppDbContext context)
         {
-            new Employee { Id = 1, FullName = "Іван Водійченко", Role = "Водій", Phone = "0501112233", LicenseCategory = "C, CE", MedicalCertExpiry = "12.10.2026", IsActive = true },
-            new Employee { Id = 2, FullName = "Петро Дальнобій", Role = "Водій", Phone = "0672223344", LicenseCategory = "C1, C", MedicalCertExpiry = "05.05.2027", IsActive = true },
-            new Employee { Id = 3, FullName = "Олена Менеджер", Role = "Менеджер", Phone = "0933334455", LicenseCategory = "-", MedicalCertExpiry = "-", IsActive = true }
-        };
+            _context = context;
+        }
 
         public event Action? OnChange;
 
-        public List<Employee> GetAllEmployees() => employees;
+        public List<Employee> GetAllEmployees()
+        {
+            return _context.Employees
+                .AsNoTracking()
+                .OrderBy(e => e.Id)
+                .ToList();
+        }
 
         public void AddEmployee(Employee employee)
         {
-            employee.Id = employees.Count > 0 ? employees.Max(e => e.Id) + 1 : 1;
-            employees.Add(employee);
+            _context.Employees.Add(employee);
+            _context.SaveChanges();
+
             NotifyStateChanged();
         }
 
         public void DeleteEmployee(int id)
         {
-            var emp = employees.FirstOrDefault(e => e.Id == id);
-            if (emp != null)
+            var employee = _context.Employees.Find(id);
+
+            if (employee != null)
             {
-                employees.Remove(emp);
+                _context.Employees.Remove(employee);
+                _context.SaveChanges();
+
                 NotifyStateChanged();
             }
         }
 
-        private void NotifyStateChanged() => OnChange?.Invoke();
+        private void NotifyStateChanged()
+        {
+            OnChange?.Invoke();
+        }
     }
 }
