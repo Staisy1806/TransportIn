@@ -1,85 +1,42 @@
-﻿
-using Microsoft.EntityFrameworkCore;
-using TransportIn.Data;
-using TransportIn.Models;
+﻿using TransportIn.Models;
 
 namespace TransportIn.Services
 {
-    public class OrderService : IOrderService
+    public class OrderService
     {
-        private readonly AppDbContext _context;
+        private List<Order> orders = new();
+        public event Action? OnChange;
 
-        public OrderService(AppDbContext context)
+        public List<Order> GetAllOrders() => orders;
+
+        public void AddOrder(Order order)
         {
-            _context = context;
+            order.Id = orders.Count > 0 ? orders.Max(o => o.Id) + 1 : 1;
+            orders.Add(order);
+            NotifyStateChanged();
         }
 
-        // Отримання всіх замовлень
-        public async Task<List<Order>> GetAllOrdersAsync()
-        {
-            return await _context.Orders
-                .AsNoTracking()
-                .OrderByDescending(o => o.Id)
-                .ToListAsync();
-        }
-
-        // Отримання замовлення за ID
-        public async Task<Order?> GetOrderByIdAsync(int id)
-        {
-            return await _context.Orders.FindAsync(id);
-        }
-
-        // Додавання замовлення
-        public async Task AddOrderAsync(Order order)
-        {
-            _context.Orders.Add(order);
-            await _context.SaveChangesAsync();
-        }
-
-        // Редагування замовлення
-        public async Task UpdateOrderAsync(Order order)
-        {
-            _context.Orders.Update(order);
-            await _context.SaveChangesAsync();
-        }
-
-        // Видалення замовлення
-        public async Task DeleteOrderAsync(int id)
-        {
-            var order = await _context.Orders.FindAsync(id);
-
-            if (order != null)
-            {
-                _context.Orders.Remove(order);
-                await _context.SaveChangesAsync();
-            }
-        }
-
-        // Автоматичний підбір транспорту
-        public List<Vehicle> GetSuitableVehicles(
-            Order order,
-            List<Vehicle> allVehicles)
+        // Логіка автоматичного підбору транспорту згідно з ТЗ
+        public List<Vehicle> GetSuitableVehicles(Order order, List<Vehicle> allVehicles)
         {
             return allVehicles.Where(v =>
-                v.CapacityTons >= order.WeightTons &&
-                v.VolumeM3 >= order.VolumeM3 &&
-                (!order.RequiresRefrigerator || v.HasRefrigerator) &&
-                v.Status == "Справний"
+                v.CapacityTons >= order.WeightTons && // перевірка вантажопідйомності
+                v.VolumeM3 >= order.VolumeM3 &&       // перевірка об'єму кузова
+                (!order.RequiresRefrigerator || v.HasRefrigerator) // перевірка холодильної установки
             ).ToList();
         }
 
-        // Призначення транспорту замовленню
-        public async Task AssignVehicleAsync(int orderId, string licensePlate)
+        public void AssignVehicle(int orderId, string licensePlate)
         {
-            var order = await _context.Orders.FindAsync(orderId);
-
+            var order = orders.FirstOrDefault(o => o.Id == orderId);
             if (order != null)
             {
                 order.AssignedVehiclePlate = licensePlate;
                 order.Status = "Призначено транспорт";
-
-                await _context.SaveChangesAsync();
+                NotifyStateChanged();
             }
         }
+
+        private void NotifyStateChanged() => OnChange?.Invoke();
     }
 }

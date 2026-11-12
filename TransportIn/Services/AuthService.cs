@@ -1,34 +1,26 @@
-﻿
-using Microsoft.EntityFrameworkCore;
-using TransportIn.Data;
-using TransportIn.Models;
+﻿using TransportIn.Models;
 
 namespace TransportIn.Services
 {
     public class AuthService
     {
-        private readonly AppDbContext _context;
-
-        public AuthService(AppDbContext context)
+        // Початкові тестові користувачі для перевірки
+        private readonly List<User> _users = new()
         {
-            _context = context;
-        }
+            new User { Id = 1, Username = "admin", Password = "123", Role = UserRole.Admin, FullName = "Головний Адмін", Phone = "+380000000001" },
+            new User { Id = 2, Username = "manager", Password = "123", Role = UserRole.Manager, FullName = "Менеджер Складу", Phone = "+380000000002" },
+            new User { Id = 3, Username = "driver", Password = "123", Role = UserRole.Driver, FullName = "Водій Рефрижератора", Phone = "+380000000003" }
+        };
 
         public User? CurrentUser { get; private set; }
 
         public User? Login(string username, string password)
         {
-            var user = _context.Users
-                .AsNoTracking()
-                .FirstOrDefault(u =>
-                    u.Username == username &&
-                    u.Password == password);
-
+            var user = _users.FirstOrDefault(u => u.Username == username && u.Password == password);
             if (user != null)
             {
                 CurrentUser = user;
             }
-
             return user;
         }
 
@@ -37,41 +29,20 @@ namespace TransportIn.Services
             CurrentUser = null;
         }
 
-        public void RegisterUser(
-            string username,
-            string password,
-            UserRole role,
-            string fullName,
-            string phone)
+        public void RegisterUser(string username, string password, UserRole role, string fullName, string phone)
         {
-            bool userExists = _context.Users
-                .Any(u => u.Username == username);
-
-            if (userExists)
-            {
-                throw new InvalidOperationException(
-                    "Користувач з таким логіном вже існує.");
-            }
-
             var newUser = new User
             {
+                Id = _users.Count + 1,
                 Username = username,
                 Password = password,
                 Role = role,
                 FullName = fullName,
                 Phone = phone
             };
-
-            _context.Users.Add(newUser);
-            _context.SaveChanges();
+            _users.Add(newUser);
         }
 
-        public List<User> GetAllUsers()
-        {
-            return _context.Users
-                .AsNoTracking()
-                .OrderBy(u => u.Id)
-                .ToList();
-        }
+        public List<User> GetAllUsers() => _users;
     }
 }
