@@ -1,0 +1,87 @@
+﻿@page "/home"
+@using TransportIn.Models
+@using TransportIn.Services
+@inject IVehicleService VehicleService
+
+<PageTitle>Главная - Транспортная логистика</PageTitle>
+
+<h1>Система управления транспортной логистикой</h1>
+
+<p class="text-success">✅ Подключение к базе данных PostgreSQL и сервисам настроено успешно!</p>
+
+<hr />
+
+<h3>Список автомобилей в базе данных:</h3>
+
+@if (_vehicles == null)
+{
+    <p><em>Загрузка данных из базы...</em></p>
+}
+else if (!_vehicles.Any())
+{
+    <p>В базе данных пока нет ни одного автомобиля. Давайте добавим тестовый!</p>
+    <button class="btn btn-primary" @onclick="AddTestVehicle">Добавить тестовую машину</button>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Марка / Модель</th>
+                <th>Гос. номер</th>
+                <th>Тип кузова</th>
+                <th>Грузоподъемность (т)</th>
+                <th>Статус</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var vehicle in _vehicles)
+            {
+                <tr>
+                    <td>@vehicle.Id</td>
+                    <td>@vehicle.BrandModel</td>
+                    <td>@vehicle.LicensePlate</td>
+                    <td>@vehicle.BodyType</td>
+                    <td>@vehicle.CapacityTons т</td>
+                    <td>@vehicle.Status</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <button class="btn btn-success mt-3" @onclick="AddTestVehicle">Добавить еще автомобиль</button>
+}
+
+@code {
+    private List<Vehicle>? _vehicles;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadVehicles();
+    }
+
+    private async Task LoadVehicles()
+    {
+        _vehicles = await VehicleService.GetAllVehiclesAsync();
+    }
+
+    private async Task AddTestVehicle()
+    {
+        var newVehicle = new Vehicle
+        {
+            BrandModel = "MAN TGL",
+            LicensePlate = "AA " + new Random().Next(1000, 9999) + " ВР",
+            VinCode = "1M8G22AX8KP" + new Random().Next(10000, 99999),
+            BodyType = "Тент",
+            CapacityTons = 5.0,
+            VolumeM3 = 35.5,
+            HasRefrigerator = false,
+            AssignedDriver = "Иванов И.И.",
+            Status = "Справний"
+        };
+
+        await VehicleService.AddVehicleAsync(newVehicle);
+        await LoadVehicles(); // Перезагружаем список из базы
+    }
+}
