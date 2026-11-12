@@ -1,4 +1,5 @@
 ﻿@page "/manager-dashboard"
+@layout TransportIn.Components.Layout.AdminLayout
 @rendermode InteractiveServer
 
 @inject TransportIn.Services.AuthService AuthService
@@ -224,10 +225,6 @@
                                     </button>
                                 </div>
                             </div>
-                        }
-                    }
-                </div>
-            </div>
 
             <!-- Підбір автомобілів -->
             @if (selectedOrderForMatching != null)
@@ -283,17 +280,80 @@
                                                         disabled="@isSaving">
                                                     Призначити
                                                 </button>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
                     </div>
+
+                    <!-- Блок підбору автомобілів для обраного замовлення -->
+                    @if (selectedOrderForMatching != null)
+                    {
+                        <div class="modern-card mt-4" style="border: 1px solid var(--primary-blue);">
+                            <div class="card-header-custom" style="background: rgba(37, 99, 235, 0.05);">
+                                <h5>
+                                    <span class="header-icon blue"><i class="bi bi-truck"></i></span>
+                                    Рекомендовані авто для замовлення №@selectedOrderForMatching.Id
+                                </h5>
+                                <button class="btn-modern btn-danger-modern py-1 px-2" @onclick="() => selectedOrderForMatching = null">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <div class="card-body-custom">
+                                @{
+                                    var suitableVehicles = OrderService.GetSuitableVehicles(selectedOrderForMatching, FleetService.GetAllVehicles());
+                                }
+                                @if (!suitableVehicles.Any())
+                                {
+                                    <div class="p-3 text-center" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; color: #f87171;">
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                        Не знайдено жодного автомобіля, що відповідає вимогам за вантажопідйомністю, об'ємом чи обладнанням!
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive">
+                                        <table class="modern-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Модель</th>
+                                                    <th>Номер</th>
+                                                    <th>Вантаж.</th>
+                                                    <th>Об'єм</th>
+                                                    <th>Реф.</th>
+                                                    <th>Дія</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var veh in suitableVehicles)
+                                                {
+                                                    <tr>
+                                                        <td><strong>@veh.BrandModel</strong></td>
+                                                        <td><span class="code-text">@veh.LicensePlate</span></td>
+                                                        <td>@veh.CapacityTons т</td>
+                                                        <td>@veh.VolumeM3 м³</td>
+                                                        <td>@(veh.HasRefrigerator ? "✅" : "—")</td>
+                                                        <td>
+                                                            <button class="btn-modern btn-add py-1 px-3" style="height: auto;"
+                                                                    @onclick="() => AssignVehicle(selectedOrderForMatching.Id, veh.LicensePlate)">
+                                                                <i class="bi bi-check-lg"></i> Призначити
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
                 </div>
-            }
+            </div>
         </div>
-    </div>
+    </main>
 </div>
 
 @code {

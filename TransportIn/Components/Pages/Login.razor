@@ -1,37 +1,54 @@
 ﻿@page "/"
 @rendermode InteractiveServer
-
 @inject TransportIn.Services.AuthService AuthService
 @inject NavigationManager Navigation
 
-<div class="container mt-5" style="max-width: 400px;">
-    <div class="card shadow">
-        <div class="card-body">
-            <h3 class="card-title text-center mb-4">Вхід у систему</h3>
+<div class="login-page">
+    <div class="login-card">
+        <!-- Заголовок -->
+        <div class="login-header">
+            <i class="bi bi-truck-front-fill"></i>
+            <h2>TransportIn</h2>
+            <p>Логістична система управління</p>
+        </div>
 
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <div class="alert alert-danger">@errorMessage</div>
-            }
+        <!-- Повідомлення про помилку -->
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="login-alert-danger">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                @errorMessage
+            </div>
+        }
 
+        <!-- Форма входу -->
+        <div>
             <div class="mb-3">
-                <label>Логін:</label>
-                <input type="text" class="form-control" @bind="username" placeholder="admin / manager / driver" />
+                <label class="form-label-modern">Логін</label>
+                <div class="input-group-modern">
+                    <i class="bi bi-person"></i>
+                    <input type="text" @bind="username" placeholder="admin, manager або driver" autocomplete="username" />
+                </div>
             </div>
 
-            <div class="mb-3">
-                <label>Пароль:</label>
-                <input type="password" class="form-control" @bind="password" placeholder="123" />
+            <div class="mb-4">
+                <label class="form-label-modern">Пароль</label>
+                <div class="input-group-modern">
+                    <i class="bi bi-lock"></i>
+                    <input type="password" @bind="password" placeholder="••••••" autocomplete="current-password" />
+                </div>
             </div>
 
-            <button class="btn btn-primary w-100" @onclick="HandleLogin">Увійти</button>
+            <button class="btn-login" @onclick="HandleLogin">
+                <i class="bi bi-box-arrow-in-right"></i> Увійти в систему
+            </button>
+        </div>
 
-            <div class="mt-3 text-muted text-center" style="font-size: 0.9rem;">
-                <p>
-                    Швидкий вхід для тесту:<br>
-                    <b>admin</b> / 123 | <b>manager</b> / 123 | <b>driver</b> / 123
-                </p>
-            </div>
+        <!-- Підказка для тестування -->
+        <div class="login-hint">
+            <i class="bi bi-info-circle me-1"></i>
+            Швидкий вхід для тесту:<br>
+            <b>admin</b> / 123 &nbsp;|&nbsp; <b>manager</b> / 123 &nbsp;|&nbsp; <b>driver</b> / 123
         </div>
     </div>
 </div>
@@ -50,7 +67,7 @@
         }
         else
         {
-            // Перенаправлення залежно від ролі
+            errorMessage = "";
             switch (user.Role)
             {
                 case TransportIn.Models.UserRole.Admin:

@@ -1,4 +1,5 @@
 ﻿@page "/admin-dashboard"
+@layout TransportIn.Components.Layout.AdminLayout
 @rendermode InteractiveServer
 
 @inject TransportIn.Services.AuthService AuthService
@@ -18,10 +19,12 @@
         <button class="btn btn-outline-danger btn-sm" @onclick="Logout">Вийти</button>
     </div>
 
-    <!-- Модуль симуляції надзвичайних/гібридних загроз -->
-    <div class="card shadow-sm mb-4 border-danger">
-        <div class="card-header bg-danger text-white">
-            <h5 class="mb-0">🚨 Симуляція гібридних загроз та дорожніх подій</h5>
+<div class="admin-layout">
+    <!-- ===== САЙДБАР ===== -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">
+            <h4><i class="bi bi-truck-front-fill"></i> TransportIn</h4>
+            <small>Диспетчерський пульт</small>
         </div>
         <div class="card-body">
             <div class="row align-items-center">
@@ -55,9 +58,11 @@
                         </button>
                     </div>
                 </div>
+                <button class="btn-logout" @onclick="Logout">
+                    <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Вийти</span>
+                </button>
             </div>
         </div>
-    </div>
 
     <div class="row">
 
@@ -169,18 +174,40 @@
                                         Автомобілі відсутні
                                     </td>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach (var veh in FleetService.GetAllVehicles())
+                                {
+                                    <tr>
+                                        <td><span class="badge-modern badge-secondary">@veh.Id</span></td>
+                                        <td><strong>@veh.BrandModel</strong></td>
+                                        <td><span class="code-text">@veh.LicensePlate</span></td>
+                                        <td style="color: var(--text-secondary); font-size: 0.85rem;">@veh.VinCode</td>
+                                        <td><span class="badge-modern badge-primary">@veh.BodyType</span></td>
+                                        <td>@veh.CapacityTons т</td>
+                                        <td>@veh.VolumeM3 м³</td>
+                                        <td>@(veh.HasRefrigerator ? "✅" : "—")</td>
+                                        <td>
+                                            <button class="btn-modern btn-danger-modern" @onclick="() => FleetService.DeleteVehicle(veh.Id)" title="Видалити">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Секція 2: Управління працівниками та водіями -->
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">👥 Управління працівниками та водіями</h5>
+            <!-- Секція: Працівники -->
+            <div class="modern-card">
+                <div class="card-header-custom">
+                    <h5>
+                        <span class="header-icon green"><i class="bi bi-people"></i></span>
+                        Управління персоналом
+                    </h5>
+                    <span class="badge-count">@EmployeeService.GetAllEmployees().Count осіб</span>
                 </div>
 
                 <div class="card-body">
@@ -264,18 +291,44 @@
                                         </button>
                                     </td>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach (var emp in EmployeeService.GetAllEmployees())
+                                {
+                                    <tr>
+                                        <td><span class="badge-modern badge-secondary">@emp.Id</span></td>
+                                        <td><strong>@emp.FullName</strong></td>
+                                        <td><span class="badge-modern badge-secondary">@emp.Role</span></td>
+                                        <td>@emp.Phone</td>
+                                        <td><span class="code-text">@emp.LicenseCategory</span></td>
+                                        <td>@emp.MedicalCertExpiry</td>
+                                        <td>
+                                            <span class="badge-modern @(emp.IsActive ? "badge-success" : "badge-danger")">
+                                                <i class="bi @(emp.IsActive ? "bi-check-circle-fill" : "bi-x-circle-fill")"></i>
+                                                @(emp.IsActive ? "Активний" : "Заблокований")
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn-modern btn-danger-modern" @onclick="() => EmployeeService.DeleteEmployee(emp.Id)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Секція 3: База експертних знань -->
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-dark text-white">
-                    <h5 class="mb-0">🧠 База експертних знань та правил реагування на загрози</h5>
+            <!-- Секція: Експертні правила -->
+            <div class="modern-card">
+                <div class="card-header-custom">
+                    <h5>
+                        <span class="header-icon amber"><i class="bi bi-brain"></i></span>
+                        База експертних знань
+                    </h5>
+                    <span class="badge-count">@ExpertRulesService.GetAllRules().Count правил</span>
                 </div>
 
                 <div class="card-body">
@@ -339,9 +392,29 @@
                                         </button>
                                     </td>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach (var rule in ExpertRulesService.GetAllRules())
+                                {
+                                    <tr>
+                                        <td><strong>@rule.ThreatType</strong></td>
+                                        <td>@rule.Condition</td>
+                                        <td>@rule.ActionRecommendation</td>
+                                        <td>
+                                            <span class="badge-modern @(rule.Priority == "Критичний" ? "badge-danger" : "badge-amber")">
+                                                <i class="bi bi-flag-fill"></i> @rule.Priority
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn-modern btn-danger-modern" @onclick="() => ExpertRulesService.DeleteRule(rule.Id)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -383,10 +456,7 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private void SetEmergency(string emergencyType)
-    {
-        EmergencyService.SetEmergency(emergencyType);
-    }
+    private void SetEmergency(string emergencyType) => EmergencyService.SetEmergency(emergencyType);
 
     private async Task AddNewVehicle()
     {
@@ -440,6 +510,47 @@
         AuthService.Logout();
         Navigation.NavigateTo("/");
     }
+
+    private string GetInitials(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName)) return "?";
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2 ? $"{parts[0][0]}{parts[1][0]}".ToUpper() : fullName[..Math.Min(2, fullName.Length)].ToUpper();
+    }
+
+    private string GetEmergencyLevel() => EmergencyService.CurrentEmergency switch
+    {
+        "Спокійно" => "0",
+        "Ожеледиця" => "1",
+        "Перекриття мостів" => "2",
+        "Повітряна тривога" => "3",
+        _ => "—"
+    };
+
+    private string GetEmergencyClass() => EmergencyService.CurrentEmergency switch
+    {
+        "Спокійно" => "status-calm",
+        "Ожеледиця" or "Перекриття мостів" => "status-warning",
+        "Повітряна тривога" => "status-danger",
+        _ => "status-calm"
+    };
+
+    private string GetEmergencyIcon() => EmergencyService.CurrentEmergency switch
+    {
+        "Спокійно" => "bi-check-circle-fill",
+        "Ожеледиця" => "bi-snow2",
+        "Перекриття мостів" => "bi-sign-stop-fill",
+        "Повітряна тривога" => "bi-exclamation-triangle-fill",
+        _ => "bi-question-circle"
+    };
+
+    private string GetEmergencyIconColor() => EmergencyService.CurrentEmergency switch
+    {
+        "Спокійно" => "green",
+        "Ожеледиця" or "Перекриття мостів" => "amber",
+        "Повітряна тривога" => "red",
+        _ => "blue"
+    };
 
     public void Dispose()
     {
