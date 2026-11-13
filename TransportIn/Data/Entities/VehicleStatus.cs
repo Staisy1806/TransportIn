@@ -12,4 +12,6 @@ public partial class VehicleStatus
     public string Description { get; set; } = null!;
 
     public bool IsActive { get; set; }
+
+    public virtual ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
 }

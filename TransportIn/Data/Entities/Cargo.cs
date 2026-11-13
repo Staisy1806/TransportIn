@@ -11,6 +11,12 @@ public partial class Cargo
 
     public double WeightKg { get; set; }
 
+    public double? VolumeM3 { get; set; }
+
+    public double? MinTemperatureC { get; set; }
+
+    public double? MaxTemperatureC { get; set; }
+
     public string TransportConditions { get; set; } = null!;
 
     public string SenderName { get; set; } = null!;

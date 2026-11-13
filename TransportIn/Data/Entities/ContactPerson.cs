@@ -22,4 +22,6 @@ public partial class ContactPerson
     public bool IsActive { get; set; }
 
     public virtual Customer Customer { get; set; } = null!;
+
+    public virtual ICollection<OrderPoint> OrderPoints { get; set; } = new List<OrderPoint>();
 }

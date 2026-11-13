@@ -25,5 +25,13 @@ public partial class RoadEvent
 
     public string Severity { get; set; } = null!;
 
+    public string? WeatherCondition { get; set; }
+
+    public double? WindSpeedMs { get; set; }
+
+    public double? VisibilityMeters { get; set; }
+
+    public double? TemperatureC { get; set; }
+
     public bool IsActive { get; set; }
 }

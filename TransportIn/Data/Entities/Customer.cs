@@ -22,4 +22,6 @@ public partial class Customer
     public bool IsActive { get; set; }
 
     public virtual ICollection<ContactPerson> ContactPeople { get; set; } = new List<ContactPerson>();
+
+    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 }

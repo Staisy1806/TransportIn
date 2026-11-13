@@ -7,6 +7,10 @@ public partial class Order
 {
     public int Id { get; set; }
 
+    public int? CustomerId { get; set; }
+
+    public int? OrderStatusId { get; set; }
+
     public string CustomerCompany { get; set; } = null!;
 
     public string CustomerName { get; set; } = null!;
@@ -30,6 +34,10 @@ public partial class Order
     public string AssignedVehiclePlate { get; set; } = null!;
 
     public string Status { get; set; } = null!;
+
+    public virtual Customer? CustomerNavigation { get; set; }
+
+    public virtual OrderStatus? OrderStatusNavigation { get; set; }
 
     public virtual ICollection<DriverReport> DriverReports { get; set; } = new List<DriverReport>();
 

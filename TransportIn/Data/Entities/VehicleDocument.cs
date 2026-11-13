@@ -21,5 +21,9 @@ public partial class VehicleDocument
 
     public string Details { get; set; } = null!;
 
+    public string? Status { get; set; }
+
+    public string? FilePath { get; set; }
+
     public virtual Vehicle Vehicle { get; set; } = null!;
 }

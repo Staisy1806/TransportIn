@@ -9,6 +9,8 @@ public partial class OrderPoint
 
     public int OrderId { get; set; }
 
+    public int? ContactPersonId { get; set; }
+
     public string PointType { get; set; } = null!;
 
     public string Address { get; set; } = null!;
@@ -32,4 +34,6 @@ public partial class OrderPoint
     public string Notes { get; set; } = null!;
 
     public virtual Order Order { get; set; } = null!;
+
+    public virtual ContactPerson? ContactPersonNavigation { get; set; }
 }

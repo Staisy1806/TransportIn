@@ -9,6 +9,12 @@ public partial class Employee
 
     public string FullName { get; set; } = null!;
 
+    public string? LastName { get; set; }
+
+    public string? FirstName { get; set; }
+
+    public string? MiddleName { get; set; }
+
     public string Role { get; set; } = null!;
 
     public string Phone { get; set; } = null!;
@@ -22,6 +28,8 @@ public partial class Employee
     public string Address { get; set; } = null!;
 
     public string Email { get; set; } = null!;
+
+    public string? TaxId { get; set; }
 
     public string PhotoPath { get; set; } = null!;
 
@@ -42,6 +50,8 @@ public partial class Employee
     public virtual ICollection<OrderStatusHistory> OrderStatusHistories { get; set; } = new List<OrderStatusHistory>();
 
     public virtual Role RoleNavigation { get; set; } = null!;
+
+    public virtual User? UserNavigation { get; set; }
 
     public virtual ICollection<RouteHistory> RouteHistories { get; set; } = new List<RouteHistory>();
 

@@ -15,12 +15,8 @@ builder.Services.AddRazorComponents()
 builder.Services.AddSingleton<TransportIn.Services.AuthService>();
 builder.Services.AddSingleton<TransportIn.Services.EmergencyService>();
 builder.Services.AddScoped<TransportIn.Services.FleetService>();
-builder.Services.AddSingleton<TransportIn.Services.OrderService>();
-builder.Services.AddSingleton<TransportIn.Services.ExpertRulesService>();
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-    ));
+builder.Services.AddScoped<TransportIn.Services.OrderService>();
+builder.Services.AddScoped<TransportIn.Services.ExpertRulesService>();
 builder.Services.AddScoped<EmployeeService>();
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())

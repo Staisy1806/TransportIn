@@ -78,6 +78,23 @@ public partial class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasIndex(e => e.Username).IsUnique();
+            entity.HasIndex(e => e.EmployeeId).IsUnique();
+            entity.Property(e => e.PasswordHash).HasMaxLength(500);
+
+            entity.HasOne(e => e.EmployeeNavigation)
+                .WithOne(e => e.UserNavigation)
+                .HasForeignKey<User>(e => e.EmployeeId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.RoleNavigation)
+                .WithMany(e => e.Users)
+                .HasForeignKey(e => e.Role)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<ActivityLog>(entity =>
         {
             entity.HasIndex(e => e.EmployeeId, "IX_ActivityLogs_EmployeeId");
@@ -100,6 +117,11 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Position).HasMaxLength(100);
 
             entity.HasOne(d => d.Customer).WithMany(p => p.ContactPeople).HasForeignKey(d => d.CustomerId);
+
+            entity.HasMany(d => d.OrderPoints)
+                .WithOne(p => p.ContactPersonNavigation)
+                .HasForeignKey(p => p.ContactPersonId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Customer>(entity =>
@@ -111,6 +133,31 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Notes).HasMaxLength(1000);
             entity.Property(e => e.Phone).HasMaxLength(30);
+        });
+
+        modelBuilder.Entity<Cargo>(entity =>
+        {
+            entity.ToTable(table =>
+            {
+                table.HasCheckConstraint("CK_Cargos_VolumeM3_NonNegative", "\"VolumeM3\" IS NULL OR \"VolumeM3\" >= 0");
+                table.HasCheckConstraint("CK_Cargos_TemperatureRange", "\"MinTemperatureC\" IS NULL OR \"MaxTemperatureC\" IS NULL OR \"MinTemperatureC\" <= \"MaxTemperatureC\"");
+            });
+        });
+
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.HasIndex(e => e.CustomerId);
+            entity.HasIndex(e => e.OrderStatusId);
+
+            entity.HasOne(e => e.CustomerNavigation)
+                .WithMany(e => e.Orders)
+                .HasForeignKey(e => e.CustomerId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.OrderStatusNavigation)
+                .WithMany(e => e.Orders)
+                .HasForeignKey(e => e.OrderStatusId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<DriverReport>(entity =>
@@ -157,6 +204,13 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Email).HasDefaultValueSql("''::text");
             entity.Property(e => e.PhotoPath).HasDefaultValueSql("''::text");
             entity.Property(e => e.RoleId).HasDefaultValue(0);
+            entity.Property(e => e.FirstName).HasMaxLength(100);
+            entity.Property(e => e.LastName).HasMaxLength(100);
+            entity.Property(e => e.MiddleName).HasMaxLength(100);
+            entity.Property(e => e.TaxId).HasMaxLength(10);
+            entity.ToTable(table => table.HasCheckConstraint(
+                "CK_Employees_TaxId_Format",
+                "\"TaxId\" IS NULL OR \"TaxId\" ~ '^[0-9]{10}$'"));
 
             entity.HasOne(d => d.RoleNavigation).WithMany(p => p.Employees)
                 .HasForeignKey(d => d.RoleId)
@@ -169,6 +223,14 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.DocumentNumber).HasMaxLength(100);
             entity.Property(e => e.IssuedBy).HasMaxLength(200);
+            entity.Property(e => e.DocumentSeries).HasMaxLength(20);
+            entity.Property(e => e.UniqueRecordNumber).HasMaxLength(20);
+            entity.Property(e => e.InstitutionName).HasMaxLength(200);
+            entity.Property(e => e.Specialty).HasMaxLength(200);
+            entity.Property(e => e.MilitarySpecialtyCode).HasMaxLength(10);
+            entity.Property(e => e.MilitaryRank).HasMaxLength(100);
+            entity.Property(e => e.RecruitmentOffice).HasMaxLength(200);
+            entity.Property(e => e.FilePath).HasMaxLength(500);
 
             entity.HasOne(d => d.Employee).WithMany(p => p.EmployeeDocuments).HasForeignKey(d => d.EmployeeId);
         });
@@ -241,6 +303,8 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Status).HasMaxLength(50);
 
             entity.HasOne(d => d.Order).WithMany(p => p.OrderPoints).HasForeignKey(d => d.OrderId);
+
+            entity.HasIndex(e => e.ContactPersonId);
         });
 
         modelBuilder.Entity<OrderStatus>(entity =>
@@ -250,6 +314,21 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(300);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<Vehicle>(entity =>
+        {
+            entity.HasIndex(e => e.VehicleStatusId);
+
+            entity.HasOne(e => e.VehicleStatusNavigation)
+                .WithMany(e => e.Vehicles)
+                .HasForeignKey(e => e.VehicleStatusId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.ToTable(table =>
+            {
+                table.HasCheckConstraint("CK_Vehicles_Dimensions_NonNegative", "(\"ExteriorLengthMeters\" IS NULL OR \"ExteriorLengthMeters\" >= 0) AND (\"ExteriorWidthMeters\" IS NULL OR \"ExteriorWidthMeters\" >= 0) AND (\"ExteriorHeightMeters\" IS NULL OR \"ExteriorHeightMeters\" >= 0) AND (\"InteriorLengthMeters\" IS NULL OR \"InteriorLengthMeters\" >= 0) AND (\"InteriorWidthMeters\" IS NULL OR \"InteriorWidthMeters\" >= 0) AND (\"InteriorHeightMeters\" IS NULL OR \"InteriorHeightMeters\" >= 0) AND (\"EmptyWeightKg\" IS NULL OR \"EmptyWeightKg\" >= 0) AND (\"MaxGrossWeightKg\" IS NULL OR \"MaxGrossWeightKg\" >= 0)");
+            });
         });
 
         modelBuilder.Entity<OrderStatusHistory>(entity =>
